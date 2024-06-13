@@ -35,7 +35,14 @@ check_installations() {
         echo -e "${GREEN}Docker is installed.${NC}"
     fi
 
-    if [ "$INSTALL_GO" = true ] || [ "$INSTALL_DOCKER" = true ]; then
+    if ! pkg-config --exists webkit2gtk-4.0; then
+        echo -e "${RED}webkit2gtk is not installed.${NC}"
+        INSTALL_WEBKIT=true
+    else
+        echo -e "${GREEN}webkit2gtk is installed.${NC}"
+    fi
+
+    if [ "$INSTALL_DOCKER" = true ] || [ "$INSTALL_WEBKIT" = true ]; then
         echo -e "\n${YELLOW}Please install the missing dependencies and run the script again.${NC}"
         exit 1
     fi
