@@ -110,7 +110,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 		if url == "" {
 			url = "Not Available"
 		}
-		containerID := truncateString(container.ID, 12)
+		containerID := container.ID
 		image := truncateString(container.Image, 20)
 		imageID := container.ImageID
 		volume := "Not Available"
@@ -118,7 +118,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 			volume = truncateString(container.Mounts[0].Source, volumeWidth)
 		}
 		created := truncateString(time.Unix(container.Created, 0).Format("2006-01-02 15:04:05"), 20)
-		status := truncateString(container.Status, 20)
+		status := container.Status
 		names := "Not Available"
 		if len(container.Names) > 0 {
 			names = truncateString(container.Names[0][1:], 20)

@@ -75,7 +75,7 @@ const App = () => {
       >
         <div className="flex items-center justify-center mb-4">
           <button
-            className="bg-blue-500 py-2 px-4 rounded-full flex items-center"
+            className="bg-blue-700 py-2 px-4 rounded-full flex items-center hover:bg-blue-600"
             onClick={handleCreateClick}
             disabled={isCreating}
           >
@@ -104,7 +104,7 @@ const App = () => {
           </ul>
         </nav>
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-ew-resize bg-gray-600 ${
+          className={`absolute top-0 right-0 w-[2px] h-full cursor-ew-resize bg-gray-600 ${
             isCreating ? "pointer-events-none" : ""
           }`}
           onMouseDown={handleMouseDown}
@@ -307,7 +307,7 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
         <p className="font-bold">
           {container.name.length > 0 ? container.name : "No Name"}
         </p>
-        <p className="opacity-50">ID: {container.id}</p>
+        <p className="opacity-50">ID: {container.id.slice(0, 10)}</p>
         <p className="opacity-50">Image: {container.image}</p>
         <p className="opacity-50">Volume: {container.volume || "N/A"}</p>
         <p className="opacity-50">Created At: {container.created}</p>
@@ -317,7 +317,7 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
               ? "text-green-500"
               : container.status.slice(0, 6) === "Exited"
               ? "text-red-500"
-              : "text-yellow-500"
+              : "text-green-500"
           }`}
         >
           Status: {container.status}
