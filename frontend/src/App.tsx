@@ -383,12 +383,12 @@ const ImagesScreen = () => {
   }, []);
 
   return (
-    <div>
+    <div className="h-full overflow-auto">
       <h2 className="text-2xl font-bold mb-4">Images</h2>
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <div className="space-y-4 overflow-auto">
+        <div className="space-y-4">
           <ImageCard images={images} />
         </div>
       )}

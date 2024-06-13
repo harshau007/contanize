@@ -75,7 +75,7 @@ func main() {
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 			About: &mac.AboutInfo{
-				Title:   "devcontrolGUI",
+				Title:   "DevControl Desktop",
 				Message: "",
 				Icon:    icon,
 			},
