@@ -276,15 +276,10 @@ const ContainersScreen: React.FC<{ isCreating: boolean }> = ({
         </div>
       ) : (
         <div className="flex-grow overflow-auto space-y-4">
-          {isCreating ? (
-            <PlaceholderCard isCreating={isCreating} />
-          ) : (
-            <>
-              {containers.map((container, index) => (
-                <ContainerCard key={index} container={container} />
-              ))}
-            </>
-          )}
+          {isCreating ? <PlaceholderCard isCreating={isCreating} /> : null}
+          {containers.map((container, index) => (
+            <ContainerCard key={index} container={container} />
+          ))}
         </div>
       )}
     </div>
