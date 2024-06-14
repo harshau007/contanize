@@ -1,5 +1,13 @@
 import React, { useState, useRef, FormEvent, useEffect } from "react";
-import { FiPlus, FiExternalLink, FiTrash2, FiPlay } from "react-icons/fi";
+import {
+  FiPlus,
+  FiExternalLink,
+  FiTrash2,
+  FiPlay,
+  FiChevronDown,
+  FiChevronRight,
+  FiArrowRight,
+} from "react-icons/fi";
 import { FaRegStopCircle } from "react-icons/fa";
 import {
   SelectFolder,
@@ -11,6 +19,10 @@ import {
   StopContainer,
   ListImages,
   RemoveImages,
+  CheckIfImageHasChildren,
+  AddPortForwardingRule,
+  RemovePortForwardingRule,
+  ListPortForwardingRules,
 } from "../wailsjs/go/main/App";
 import { main } from "wailsjs/go/models";
 import "./globals.css";
@@ -68,14 +80,12 @@ const App = () => {
   return (
     <div className="flex h-screen select-none">
       <aside
-        className={`relative bg-dark-gray text-white p-2 pt-4 ${
-          isCreating ? "pointer-events-none bg-dark-gray opacity-90" : ""
-        }`}
+        className={`relative bg-dark-gray text-white p-2 pt-4 `}
         style={{ width: `${sidebarWidth}%` }}
       >
         <div className="flex items-center justify-center mb-4">
           <button
-            className="bg-blue-700 py-2 px-4 rounded-full flex items-center hover:bg-blue-600"
+            className="bg-blue-700 py-2 px-4 rounded-full flex items-center hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-700"
             onClick={handleCreateClick}
             disabled={isCreating}
           >
@@ -101,6 +111,14 @@ const App = () => {
             >
               Images
             </li>
+            {/* <li
+              className={`p-2 pl-4 mr-2 cursor-pointer font-bold text-lg ${
+                activeTab === "port-forwarding" ? "bg-gray-700 rounded-lg" : ""
+              }`}
+              onClick={() => handleTabClick("port-forwarding")}
+            >
+              Port Forwarding
+            </li> */}
           </ul>
         </nav>
         <div
@@ -116,6 +134,9 @@ const App = () => {
             <ContainersScreen isCreating={isCreating} />
           )}
           {activeTab === "images" && !isFormVisible && <ImagesScreen />}
+          {/* {activeTab === "port-forwarding" && !isFormVisible && (
+            <PortForwardingScreen />
+          )} */}
           {isFormVisible && (
             <CreateForm
               onSubmit={(e, containerName, technology, folder) =>
@@ -232,25 +253,40 @@ const ContainersScreen: React.FC<{ isCreating: boolean }> = ({
 
   const handleContainer = async () => {
     const containerData = await ListAllContainersJSON();
-    setContainers(containerData);
-    // console.log(JSON.stringify(containerData));
+    setContainers(containerData || []);
+    console.log(JSON.stringify(containerData));
   };
 
   useEffect(() => {
     handleContainer();
-    const interval = setInterval(handleContainer, 3000); // Fetch container data every 3 seconds
-    return () => clearInterval(interval); // Clear the interval on component unmount
+    const interval = setInterval(handleContainer, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="h-full overflow-auto">
+    <div
+      className={`h-full flex flex-col ${
+        containers.length ? "overflow-hidden" : "overflow-auto"
+      }`}
+    >
       <h2 className="text-2xl font-bold mb-4">Containers</h2>
-      <div className="space-y-4">
-        {containers.map((container, index) => (
-          <ContainerCard key={index} container={container} />
-        ))}
-        {isCreating ? <PlaceholderCard isCreating={isCreating} /> : null}
-      </div>
+      {containers.length === 0 ? (
+        <div className="flex-grow flex items-center justify-center">
+          <h1 className="opacity-50 text-2xl">No containers</h1>
+        </div>
+      ) : (
+        <div className="flex-grow overflow-auto space-y-4">
+          {isCreating ? (
+            <PlaceholderCard isCreating={isCreating} />
+          ) : (
+            <>
+              {containers.map((container, index) => (
+                <ContainerCard key={index} container={container} />
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -373,22 +409,29 @@ const ImagesScreen = () => {
 
   const handleImages = async () => {
     const imageData = await ListImages();
-    setImages(imageData);
-    setLoading(false);
-    // console.log(JSON.stringify(imageData));
+    setImages(imageData || []);
+    console.log(JSON.stringify(imageData));
   };
 
   useEffect(() => {
     handleImages();
+    const interval = setInterval(handleImages, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="h-full overflow-auto">
+    <div
+      className={`h-full flex flex-col ${
+        ImageData && ImageData.length ? "overflow-hidden" : "overflow-auto"
+      }`}
+    >
       <h2 className="text-2xl font-bold mb-4">Images</h2>
-      {loading ? (
-        <p>Loading...</p>
+      {ImageData && ImageData.length ? (
+        <div className="flex-grow flex items-center justify-center">
+          <h1 className="opacity-50 text-2xl">No images</h1>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="flex-grow overflow-auto space-y-4">
           <ImageCard images={images} />
         </div>
       )}
@@ -398,6 +441,9 @@ const ImagesScreen = () => {
 
 const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
   const [usedImages, setUsedImages] = useState<string[]>([]);
+  const [childImageCheck, setChildImageCheck] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   useEffect(() => {
     const checkImageUsage = async () => {
@@ -414,16 +460,32 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
       }
     };
 
+    const checkChildImages = async () => {
+      const childCheckResults: { [key: string]: boolean } = {};
+      for (const image of images) {
+        const hasChildren = await CheckIfImageHasChildren(image.image_id);
+        childCheckResults[image.image_id] = hasChildren;
+      }
+      setChildImageCheck(childCheckResults);
+    };
+
     checkImageUsage();
-  }, []);
+    checkChildImages();
+  }, [images]);
 
   const isImageUsed = (imageId: string) => usedImages.includes(imageId);
+  const hasChildImages = (imageId: string) => childImageCheck[imageId];
 
   const handleDeleteClick = async (imageId: string) => {
     if (isImageUsed(imageId)) {
       alert(
-        "This image is being used by a running container. Please remove the container first."
+        "This image is being used by a container. Please remove the container first."
       );
+      return;
+    }
+
+    if (hasChildImages(imageId)) {
+      alert("This image has dependent child images and cannot be deleted.");
       return;
     }
 
@@ -448,7 +510,7 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
           <div className="flex space-x-4">
             <FiTrash2
               className={`h-6 w-6 text-red-500 cursor-pointer ${
-                isImageUsed(image.image_id)
+                isImageUsed(image.image_id) || hasChildImages(image.image_id)
                   ? "opacity-50 cursor-not-allowed"
                   : ""
               }`}
@@ -458,6 +520,183 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
         </div>
       ))}
     </>
+  );
+};
+
+// PortForwarding
+
+const PortForwardingScreen: React.FC = () => {
+  const [rules, setRules] = useState<main.PortForwardingRule[]>([]);
+  const [newRule, setNewRule] = useState({
+    containerId: "",
+    containerPort: "",
+    hostPort: "",
+  });
+  const [expandedContainers, setExpandedContainers] = useState<string[]>([]);
+  const [containers, setContainers] = useState<
+    { containerId: string; containerName: string }[]
+  >([]);
+
+  const fetchRules = async () => {
+    const fetchedRules = await ListPortForwardingRules();
+    setRules(fetchedRules || []);
+    const containerList = fetchedRules.map((rule) => ({
+      containerId: rule.container_id,
+      containerName: rule.container_name,
+    }));
+    setContainers(containerList);
+  };
+
+  useEffect(() => {
+    fetchRules();
+  }, []);
+
+  const handleAddRule = async (containerId: string) => {
+    if (newRule.containerPort && newRule.hostPort) {
+      await AddPortForwardingRule(
+        containerId,
+        newRule.containerPort,
+        newRule.hostPort
+      );
+      setNewRule({ containerId: "", containerPort: "", hostPort: "" });
+      fetchRules();
+    }
+  };
+
+  const handleRemoveRule = async (
+    containerId: string,
+    containerPort: string,
+    hostPort: string
+  ) => {
+    // await RemovePortForwardingRule(containerId, containerPort, hostPort);
+    fetchRules();
+  };
+
+  const toggleContainer = (containerId: string) => {
+    setExpandedContainers((prev) =>
+      prev.includes(containerId)
+        ? prev.filter((id) => id !== containerId)
+        : [...prev, containerId]
+    );
+  };
+
+  const groupRulesByContainer = () => {
+    return rules.reduce((acc, rule) => {
+      if (!acc[rule.container_id]) {
+        acc[rule.container_id] = {
+          containerName: rule.container_name,
+          rules: [],
+        };
+      }
+      acc[rule.container_id].rules.push(rule);
+      return acc;
+    }, {} as Record<string, { containerName: string; rules: main.PortForwardingRule[] }>);
+  };
+
+  const groupedRules = groupRulesByContainer();
+
+  return (
+    <div className="h-full flex flex-col">
+      <h2 className="text-2xl font-bold mb-4">Port Forwarding</h2>
+      <div className="space-y-4">
+        <div className="border border-gray-300 rounded p-4 space-y-2">
+          <h3 className="text-xl font-bold">Existing Rules</h3>
+          {Object.keys(groupedRules).length === 0 ? (
+            <p>No port forwarding rules found</p>
+          ) : (
+            Object.keys(groupedRules).map((containerId) => (
+              <div key={containerId} className="border-b border-gray-300 pb-2">
+                <div
+                  className="flex justify-between items-center cursor-pointer"
+                  onClick={() => toggleContainer(containerId)}
+                >
+                  <span className="font-bold">
+                    {groupedRules[containerId].containerName}
+                  </span>
+                  {expandedContainers.includes(containerId) ? (
+                    <FiChevronDown />
+                  ) : (
+                    <FiChevronRight />
+                  )}
+                </div>
+                {expandedContainers.includes(containerId) && (
+                  <div className="pl-4 space-y-2">
+                    {groupedRules[containerId].rules.map((rule) => (
+                      <div
+                        key={`${rule.container_id}-${rule.container_port}-${rule.host_port}`}
+                        className="flex justify-between items-center"
+                      >
+                        <div className="flex items-center">
+                          <span>{rule.container_port}</span>
+                          <FiArrowRight />
+                          <span>{rule.host_port}</span>
+                        </div>
+                        <button
+                          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                          onClick={() =>
+                            handleRemoveRule(
+                              rule.container_id,
+                              rule.container_port,
+                              rule.host_port
+                            )
+                          }
+                        >
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        className="w-1/3 p-2 border border-gray-300 rounded text-black"
+                        placeholder="Container Port"
+                        value={newRule.containerPort}
+                        onChange={(e) =>
+                          setNewRule({
+                            ...newRule,
+                            containerPort: e.target.value,
+                            containerId,
+                          })
+                        }
+                        onKeyDown={(e) => {
+                          if (isNaN(Number(e.key))) {
+                            e.preventDefault();
+                          }
+                        }}
+                      />
+                      <input
+                        type="text"
+                        className="w-1/3 p-2 border border-gray-300 rounded text-black"
+                        placeholder="Host Port"
+                        value={newRule.hostPort}
+                        onChange={(e) =>
+                          setNewRule({
+                            ...newRule,
+                            hostPort: e.target.value,
+                            containerId,
+                          })
+                        }
+                        onKeyDown={(e) => {
+                          if (isNaN(Number(e.key))) {
+                            e.preventDefault();
+                          }
+                        }}
+                      />
+                      <button
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                        onClick={() => handleAddRule(containerId)}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

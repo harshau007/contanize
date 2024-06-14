@@ -12,6 +12,8 @@ import (
 	"github.com/docker/docker/api/types"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 
 	imagetype "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -166,7 +168,7 @@ func (a *App) URL(url string) {
 }
 
 func (a *App) CreateCodeInstance(name string, packageName string, folder string) (string, error) {
-	cmd := exec.Command("portdevctl", name, packageName, folder)
+	cmd := exec.Command("portdevctl", strings.ToLower(name), packageName, folder)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", err
@@ -288,7 +290,7 @@ func (a *App) ListImages() []imageDetail {
 			imageName = "<none>"
 			tag = "<none>"
 		}
-		imageID := truncateString(image.ID[7:17], imageIDWidth)
+		imageID := strings.ReplaceAll(image.ID, "sha256:", "")[0:10]
 		created := truncateString(time.Unix(image.Created, 0).Format("2006-01-02 15:04:05"), createdWidth)
 		size := truncateString(formatSize(image.Size), sizeWidth)
 
@@ -336,10 +338,167 @@ func (a *App) RemoveImages(id string, force bool, prune bool) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println(images[1].Deleted)
+}
 
-	if len(images[1].Deleted) > 0 {
-		fmt.Println("No images were deleted")
-	} else {
-		fmt.Println("Deleted: " + images[1].Deleted[7:])
+func (a *App) CheckIfImageHasChildren(id string) bool {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return false
 	}
+
+	// List all images
+	filters := filters.NewArgs(filters.Arg("label", "createdBy=DevControl"))
+	images, err := cli.ImageList(ctx, imagetype.ListOptions{All: true, Filters: filters})
+	if err != nil {
+		return false
+	}
+
+	// Check for child images
+	for _, image := range images {
+		if image.ParentID == id {
+			return true
+		}
+	}
+
+	return false
+}
+
+// PortForwarding
+
+type PortForwardingRule struct {
+	ContainerName string `json:"container_name"`
+	ContainerID   string `json:"container_id"`
+	ContainerPort string `json:"container_port"`
+	HostPort      string `json:"host_port"`
+}
+
+func (a *App) ListPortForwardingRules() []PortForwardingRule {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return nil
+	}
+	defer cli.Close()
+
+	filters := filters.NewArgs(
+		filters.Arg("label", "createdBy=DevControl"),
+	)
+	containers, err := cli.ContainerList(ctx, containertypes.ListOptions{All: true, Filters: filters})
+	if err != nil {
+		return nil
+	}
+
+	var rules []PortForwardingRule
+
+	for _, container := range containers {
+		containerName := container.Names
+		containerID := container.ID
+		containerJSON, err := cli.ContainerInspect(ctx, containerID)
+		if err != nil {
+			continue
+		}
+
+		portBindings := containerJSON.HostConfig.PortBindings
+		for port, bindings := range portBindings {
+			for _, binding := range bindings {
+				rule := PortForwardingRule{
+					ContainerName: containerName[0][1:],
+					ContainerID:   containerID,
+					ContainerPort: port.Port(),
+					HostPort:      binding.HostPort,
+				}
+				rules = append(rules, rule)
+			}
+		}
+	}
+
+	return rules
+}
+
+func (a *App) AddPortForwardingRule(containerID string, containerPort string, hostPort string) error {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	containerJSON, err := cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return err
+	}
+
+	portBinding := nat.PortBinding{
+		HostIP:   "0.0.0.0",
+		HostPort: hostPort,
+	}
+
+	portBindings := containerJSON.HostConfig.PortBindings
+	if portBindings == nil {
+		portBindings = make(nat.PortMap)
+	}
+
+	portBindings[nat.Port(containerPort)] = append(portBindings[nat.Port(containerPort)], portBinding)
+
+	containerJSON.HostConfig.PortBindings = portBindings
+
+	// Stop the container
+	if err := cli.ContainerStop(ctx, containerID, containertypes.StopOptions{}); err != nil {
+		return err
+	}
+
+	// Create new container with modified configuration
+	newContainerID, err := cli.ContainerCreate(ctx, &containertypes.Config{
+		Image:        containerJSON.Config.Image,
+		Cmd:          containerJSON.Config.Cmd,
+		Env:          containerJSON.Config.Env,
+		ExposedPorts: containerJSON.Config.ExposedPorts,
+	}, containerJSON.HostConfig, &network.NetworkingConfig{
+		EndpointsConfig: containerJSON.NetworkSettings.Networks,
+	}, nil, containerJSON.Name)
+	if err != nil {
+		return err
+	}
+
+	// Start the new container
+	if err := cli.ContainerStart(ctx, newContainerID.ID, containertypes.StartOptions{}); err != nil {
+		return err
+	}
+
+	// Remove the old container
+	if err := cli.ContainerRemove(ctx, containerID, containertypes.RemoveOptions{Force: true}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *App) RemovePortForwardingRule(containerID string, containerPort int) error {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	containerJSON, err := cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return err
+	}
+
+	portBindings := containerJSON.HostConfig.PortBindings
+	delete(portBindings, nat.Port(fmt.Sprintf("%d/tcp", containerPort)))
+
+	updateConfig := containertypes.UpdateConfig{
+		// PortBindings: portBindings,
+	}
+
+	_, err = cli.ContainerUpdate(ctx, containerID, updateConfig)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
