@@ -405,7 +405,6 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
 
 const ImagesScreen = () => {
   const [images, setImages] = useState<main.imageDetail[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const handleImages = async () => {
     const imageData = await ListImages();
@@ -422,11 +421,11 @@ const ImagesScreen = () => {
   return (
     <div
       className={`h-full flex flex-col ${
-        ImageData && ImageData.length ? "overflow-hidden" : "overflow-auto"
+        images && images.length ? "overflow-hidden" : "overflow-auto"
       }`}
     >
       <h2 className="text-2xl font-bold mb-4">Images</h2>
-      {ImageData && ImageData.length ? (
+      {images && images.length === 0 ? (
         <div className="flex-grow flex items-center justify-center">
           <h1 className="opacity-50 text-2xl">No images</h1>
         </div>
