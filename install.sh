@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Copyright 2024-present DevControl contributors.
+# Copyright 2024-present devbox contributors.
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -42,7 +42,15 @@ check_installations() {
         echo -e "${GREEN}webkit2gtk is installed.${NC}"
     fi
 
-    if [ "$INSTALL_DOCKER" = true ] || [ "$INSTALL_WEBKIT" = true ]; then
+    if ! command -v go >/dev/null 2>&1; then
+        echo -e "${RED}Go is not installed.${NC}"
+        echo "Please install Go from https://golang.org/dl/"
+        INSTALL_GO=true
+    else
+        echo -e "${GREEN}Go is installed.${NC}"
+    fi
+
+    if [ "$INSTALL_DOCKER" = true ] || [ "$INSTALL_GO" = true ] || [ "$INSTALL_WEBKIT" = true ]; then
         echo -e "\n${YELLOW}Please install the missing dependencies and run the script again.${NC}"
         exit 1
     fi
@@ -51,8 +59,8 @@ check_installations() {
 # Function to clone repository and set it up
 setup_repository() {
     echo -e "\n${CYAN}Cloning repository...${NC}"
-    REPO_DIR="$HOME/.devcontrol"
-    git clone https://github.com/harshau007/devcontrol.git "$REPO_DIR" || {
+    REPO_DIR="$HOME/.devbox"
+    git clone https://github.com/harshau007/devbox.git "$REPO_DIR" || {
         echo -e "${RED}Failed to clone repository.${NC}"
         exit 1
     }
@@ -61,31 +69,31 @@ setup_repository() {
     echo -e "\n${CYAN}Setting up the project...${NC}"
     go mod tidy || {
         echo -e "${RED}Failed to set up the project.${NC}"
-        remove_repo "$REPO_DIR"
+        remove_repo
         exit 1
     }
 
     echo -e "\n${BLUE}Building the project...${NC}"
     go build -o devctl || {
         echo -e "${RED}Failed to build the project.${NC}"
-        remove_repo "$REPO_DIR"
+        remove_repo
         exit 1
     }
 
     echo -e "\n${BLUE}Copying binaries and files...${NC}"
     sudo cp devctl portdevctl startdevctl /usr/bin/ || {
         echo -e "${RED}Failed to copy binaries.${NC}"
-        remove_repo "$REPO_DIR"
+        remove_repo
         exit 1
     }
-    sudo mkdir -p /usr/local/share/devcontrol/ || {
+    sudo mkdir -p /usr/local/share/devbox/ || {
         echo -e "${RED}Failed to create directory for config files.${NC}"
-        remove_repo "$REPO_DIR"
+        remove_repo
         exit 1
     }
-    sudo cp dockerfile settings.json /usr/local/share/devcontrol/ || {
+    sudo cp dockerfile settings.json setup.sh /usr/local/share/devbox/ || {
         echo -e "${RED}Failed to copy config files.${NC}"
-        remove_repo "$REPO_DIR"
+        remove_repo
         exit 1
     }
 
@@ -93,42 +101,42 @@ setup_repository() {
     echo -e "${YELLOW}Run 'devctl -h' for further details.${NC}"
 }
 
-# Function to clone devcontrol-desktop repository, move files, and clean up
-setup_devcontrol_desktop() {
-    echo -e "\n${CYAN}Cloning devcontrol-desktop repository...${NC}"
-    DEVCONTROL_DESKTOP_DIR="$HOME/.devcontrol-desktop"
-    git clone https://github.com/harshau007/devcontrol-desktop.git "$DEVCONTROL_DESKTOP_DIR" || {
-        echo -e "${RED}Failed to clone devcontrol-desktop repository.${NC}"
+# Function to clone devbox-desktop repository, move files, and clean up
+setup_devbox_desktop() {
+    echo -e "\n${CYAN}Cloning devbox-desktop repository...${NC}"
+    DEVBOX_DESKTOP_DIR="$HOME/.devbox-desktop"
+    git clone https://github.com/harshau007/devbox-desktop.git "$DEVBOX_DESKTOP_DIR" || {
+        echo -e "${RED}Failed to clone devbox-desktop repository.${NC}"
         exit 1
     }
-    cd "$DEVCONTROL_DESKTOP_DIR" || exit 1
+    cd "$DEVBOX_DESKTOP_DIR" || exit 1
 
-    echo -e "\n${BLUE}Moving devcontroldesktop binary...${NC}"
-    sudo cp build/bin/devcontroldesktop /usr/bin/ || {
-        echo -e "${RED}Failed to move devcontroldesktop binary.${NC}"
+    echo -e "\n${BLUE}Moving devboxdesktop binary...${NC}"
+    sudo cp build/bin/devboxdesktop /usr/bin/ || {
+        echo -e "${RED}Failed to move devboxdesktop binary.${NC}"
         remove_repo "$REPO_DIR"
-        remove_repo "$DEVCONTROL_DESKTOP_DIR"
+        remove_repo "$DEVBOX_DESKTOP_DIR"
         exit 1
     }
 
-    echo -e "\n${BLUE}Moving devcontrol.desktop...${NC}"
-    sudo cp LinuxBuild/devcontrol.desktop /usr/share/applications/ || {
-        echo -e "${RED}Failed to move devcontrol.desktop.${NC}"
+    echo -e "\n${BLUE}Moving devbox.desktop...${NC}"
+    sudo cp LinuxBuild/devbox.desktop /usr/share/applications/ || {
+        echo -e "${RED}Failed to move devbox.desktop.${NC}"
         remove_repo "$REPO_DIR"
-        remove_repo "$DEVCONTROL_DESKTOP_DIR"
+        remove_repo "$DEVBOX_DESKTOP_DIR"
         exit 1
     }
 
-    echo -e "\n${BLUE}Moving devcontroldesktop.png...${NC}"
-    sudo cp LinuxBuild/devcontroldesktop.png /usr/share/pixmaps/ || {
-        echo -e "${RED}Failed to move devcontroldesktop.png.${NC}"
+    echo -e "\n${BLUE}Moving devbox.png...${NC}"
+    sudo cp LinuxBuild/devbox.png /usr/share/pixmaps/ || {
+        echo -e "${RED}Failed to move devbox.png.${NC}"
         remove_repo "$REPO_DIR"
-        remove_repo "$DEVCONTROL_DESKTOP_DIR"
+        remove_repo "$DEVBOX_DESKTOP_DIR"
         exit 1
     }
 
-    echo -e "\n${GREEN}Setup completed for devcontrol-desktop!${NC}"
-    remove_repo "$DEVCONTROL_DESKTOP_DIR"
+    echo -e "\n${GREEN}Setup completed for devbox-desktop!${NC}"
+    remove_repo "$DEVBOX_DESKTOP_DIR"
 }
 
 # Function to remove the cloned repository
@@ -137,9 +145,9 @@ remove_repo() {
 }
 
 # Function to handle script exit
-trap 'remove_repo "$REPO_DIR"; remove_repo "$DEVCONTROL_DESKTOP_DIR"' EXIT
+trap 'remove_repo "$REPO_DIR"; remove_repo "$DEVBOX_DESKTOP_DIR"' EXIT
 
 check_distro
 check_installations
 setup_repository
-setup_devcontrol_desktop
+setup_devbox_desktop
