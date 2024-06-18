@@ -403,7 +403,7 @@ const ContainersScreen: React.FC<{ isCreating: boolean }> = ({
   const handleContainer = async () => {
     const containerData = await ListAllContainersJSON();
     setContainers(containerData || []);
-    console.log(JSON.stringify(containerData));
+    // console.log(JSON.stringify(containerData));
   };
 
   useEffect(() => {
@@ -570,7 +570,8 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
           <p className="opacity-50">Volume: {container.volume || "N/A"}</p>
           <p className="opacity-50">Created At: {container.created}</p>
           <p className="opacity-50">
-            Ports: {container.public_ports.join(", ")}
+            Ports:{" "}
+            {container.public_ports ? container.public_ports.join(", ") : []}
           </p>
           <p
             className={`font-semibold ${
@@ -595,7 +596,7 @@ const ImagesScreen = () => {
   const handleImages = async () => {
     const imageData = await ListImages();
     setImages(imageData || []);
-    console.log(JSON.stringify(imageData));
+    // console.log(JSON.stringify(imageData));
   };
 
   useEffect(() => {
