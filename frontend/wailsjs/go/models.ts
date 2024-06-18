@@ -1,23 +1,5 @@
 export namespace main {
 	
-	export class PortForwardingRule {
-	    container_name: string;
-	    container_id: string;
-	    container_port: string;
-	    host_port: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new PortForwardingRule(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.container_name = source["container_name"];
-	        this.container_id = source["container_id"];
-	        this.container_port = source["container_port"];
-	        this.host_port = source["host_port"];
-	    }
-	}
 	export class containerDetail {
 	    id: string;
 	    name: string;
@@ -27,6 +9,7 @@ export namespace main {
 	    created: string;
 	    status: string;
 	    url: string;
+	    public_ports: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new containerDetail(source);
@@ -42,6 +25,7 @@ export namespace main {
 	        this.created = source["created"];
 	        this.status = source["status"];
 	        this.url = source["url"];
+	        this.public_ports = source["public_ports"];
 	    }
 	}
 	export class imageDetail {

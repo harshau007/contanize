@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,8 +13,6 @@ import (
 	"github.com/docker/docker/api/types"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/go-connections/nat"
 
 	imagetype "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -58,14 +57,15 @@ func (a *App) Greet(name string) string {
 }
 
 type containerDetail struct {
-	Id      string `json:"id"`
-	Name    string `json:"name"`
-	Image   string `json:"image"`
-	ImageId string `json:"image_id"`
-	Volume  string `json:"volume"`
-	Created string `json:"created"`
-	Status  string `json:"status"`
-	URL     string `json:"url"`
+	Id          string   `json:"id"`
+	Name        string   `json:"name"`
+	Image       string   `json:"image"`
+	ImageId     string   `json:"image_id"`
+	Volume      string   `json:"volume"`
+	Created     string   `json:"created"`
+	Status      string   `json:"status"`
+	URL         string   `json:"url"`
+	PublicPorts []string `json:"public_ports"`
 }
 
 func (a *App) SelectFolder() string {
@@ -81,6 +81,11 @@ func (a *App) SelectFolder() string {
 	return dir
 }
 
+type Port struct {
+	IP         string
+	PublicPort int
+}
+
 func (a *App) ListAllContainersJSON() []containerDetail {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -90,7 +95,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 	defer cli.Close()
 
 	filters := filters.NewArgs(
-		filters.Arg("label", "createdBy=DevControl"),
+		filters.Arg("label", "createdBy=DevBox"),
 	)
 	containers, err := cli.ContainerList(ctx, containertypes.ListOptions{All: true, Filters: filters})
 	if err != nil {
@@ -107,7 +112,12 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 	for _, container := range containers {
 		var url string
 		if len(container.Ports) > 0 {
-			url = fmt.Sprintf("http://%s:%d", container.Ports[0].IP, container.Ports[0].PublicPort)
+			for _, port := range container.Ports {
+				if strings.HasPrefix(strconv.Itoa(int(port.PublicPort)), "80") {
+					url = fmt.Sprintf("http://%s:%d", port.IP, port.PublicPort)
+					break
+				}
+			}
 		}
 		if url == "" {
 			url = "Not Available"
@@ -126,15 +136,28 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 			names = truncateString(container.Names[0][1:], 20)
 		}
 
+		portMap := make(map[string]bool)
+		var publicPorts []string
+		for _, port := range container.Ports {
+			if port.PublicPort != 0 {
+				portStr := strconv.Itoa(int(port.PublicPort))
+				if !portMap[portStr] {
+					publicPorts = append(publicPorts, portStr)
+					portMap[portStr] = true
+				}
+			}
+		}
+
 		containerInfo = append(containerInfo, containerDetail{
-			Id:      containerID,
-			Image:   image,
-			ImageId: imageID,
-			Volume:  volume,
-			Created: created,
-			Status:  status,
-			Name:    names,
-			URL:     url,
+			Id:          containerID,
+			Image:       image,
+			ImageId:     imageID,
+			Volume:      volume,
+			Created:     created,
+			Status:      status,
+			Name:        names,
+			URL:         url,
+			PublicPorts: publicPorts,
 		})
 	}
 	return containerInfo
@@ -167,13 +190,34 @@ func (a *App) URL(url string) {
 	}
 }
 
-func (a *App) CreateCodeInstance(name string, packageName string, folder string) (string, error) {
-	cmd := exec.Command("portdevctl", strings.ToLower(name), packageName, folder)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", err
+func (a *App) CreateCodeInstance(name string, packageName string, folder string, ports string, template string) (string, error) {
+	var output []byte
+	var err error
+	if strings.Contains(template, "next-js") {
+		cmd := exec.Command("portdevctl", strings.ToLower(name), "nodelts", folder, ports, template)
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("error executing the script: %s", err)
+		}
+	} else if strings.Contains(template, "next-ts") {
+		cmd := exec.Command("portdevctl", strings.ToLower(name), "nodelts", folder, ports, template)
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("error executing the script: %s", err)
+		}
+	} else if strings.Contains(template, "nest") {
+		cmd := exec.Command("portdevctl", strings.ToLower(name), "nodelts", folder, ports, template)
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("error executing the script: %s", err)
+		}
+	} else {
+		cmd := exec.Command("portdevctl", strings.ToLower(name), packageName, folder, ports, "none")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("error executing the script: %s", err)
+		}
 	}
-
 	outputLines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	containerId := outputLines[len(outputLines)-1]
 
@@ -209,8 +253,8 @@ func (a *App) ForceRemoveContainer(id string) {
 	fmt.Println("Container removed: " + id)
 }
 
-func (a *App) StartContainer(name string) string {
-	cmd := exec.Command("startdevctl", name)
+func (a *App) StartContainer(name string, port string) string {
+	cmd := exec.Command("startdevctl", name, port)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Printf("Error executing the script: %v\n", err)
@@ -260,7 +304,7 @@ func (a *App) ListImages() []imageDetail {
 		return nil
 	}
 	defer cli.Close()
-	filters := filters.NewArgs(filters.Arg("label", "createdBy=DevControl"))
+	filters := filters.NewArgs(filters.Arg("label", "createdBy=DevBox"))
 	images, err := cli.ImageList(ctx, imagetype.ListOptions{Filters: filters})
 	if err != nil {
 		return nil
@@ -349,7 +393,7 @@ func (a *App) CheckIfImageHasChildren(id string) bool {
 	}
 
 	// List all images
-	filters := filters.NewArgs(filters.Arg("label", "createdBy=DevControl"))
+	filters := filters.NewArgs(filters.Arg("label", "createdBy=DevBox"))
 	images, err := cli.ImageList(ctx, imagetype.ListOptions{All: true, Filters: filters})
 	if err != nil {
 		return false
@@ -363,142 +407,4 @@ func (a *App) CheckIfImageHasChildren(id string) bool {
 	}
 
 	return false
-}
-
-// PortForwarding
-
-type PortForwardingRule struct {
-	ContainerName string `json:"container_name"`
-	ContainerID   string `json:"container_id"`
-	ContainerPort string `json:"container_port"`
-	HostPort      string `json:"host_port"`
-}
-
-func (a *App) ListPortForwardingRules() []PortForwardingRule {
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return nil
-	}
-	defer cli.Close()
-
-	filters := filters.NewArgs(
-		filters.Arg("label", "createdBy=DevControl"),
-	)
-	containers, err := cli.ContainerList(ctx, containertypes.ListOptions{All: true, Filters: filters})
-	if err != nil {
-		return nil
-	}
-
-	var rules []PortForwardingRule
-
-	for _, container := range containers {
-		containerName := container.Names
-		containerID := container.ID
-		containerJSON, err := cli.ContainerInspect(ctx, containerID)
-		if err != nil {
-			continue
-		}
-
-		portBindings := containerJSON.HostConfig.PortBindings
-		for port, bindings := range portBindings {
-			for _, binding := range bindings {
-				rule := PortForwardingRule{
-					ContainerName: containerName[0][1:],
-					ContainerID:   containerID,
-					ContainerPort: port.Port(),
-					HostPort:      binding.HostPort,
-				}
-				rules = append(rules, rule)
-			}
-		}
-	}
-
-	return rules
-}
-
-func (a *App) AddPortForwardingRule(containerID string, containerPort string, hostPort string) error {
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
-	defer cli.Close()
-
-	containerJSON, err := cli.ContainerInspect(ctx, containerID)
-	if err != nil {
-		return err
-	}
-
-	portBinding := nat.PortBinding{
-		HostIP:   "0.0.0.0",
-		HostPort: hostPort,
-	}
-
-	portBindings := containerJSON.HostConfig.PortBindings
-	if portBindings == nil {
-		portBindings = make(nat.PortMap)
-	}
-
-	portBindings[nat.Port(containerPort)] = append(portBindings[nat.Port(containerPort)], portBinding)
-
-	containerJSON.HostConfig.PortBindings = portBindings
-
-	// Stop the container
-	if err := cli.ContainerStop(ctx, containerID, containertypes.StopOptions{}); err != nil {
-		return err
-	}
-
-	// Create new container with modified configuration
-	newContainerID, err := cli.ContainerCreate(ctx, &containertypes.Config{
-		Image:        containerJSON.Config.Image,
-		Cmd:          containerJSON.Config.Cmd,
-		Env:          containerJSON.Config.Env,
-		ExposedPorts: containerJSON.Config.ExposedPorts,
-	}, containerJSON.HostConfig, &network.NetworkingConfig{
-		EndpointsConfig: containerJSON.NetworkSettings.Networks,
-	}, nil, containerJSON.Name)
-	if err != nil {
-		return err
-	}
-
-	// Start the new container
-	if err := cli.ContainerStart(ctx, newContainerID.ID, containertypes.StartOptions{}); err != nil {
-		return err
-	}
-
-	// Remove the old container
-	if err := cli.ContainerRemove(ctx, containerID, containertypes.RemoveOptions{Force: true}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (a *App) RemovePortForwardingRule(containerID string, containerPort int) error {
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
-	defer cli.Close()
-
-	containerJSON, err := cli.ContainerInspect(ctx, containerID)
-	if err != nil {
-		return err
-	}
-
-	portBindings := containerJSON.HostConfig.PortBindings
-	delete(portBindings, nat.Port(fmt.Sprintf("%d/tcp", containerPort)))
-
-	updateConfig := containertypes.UpdateConfig{
-		// PortBindings: portBindings,
-	}
-
-	_, err = cli.ContainerUpdate(ctx, containerID, updateConfig)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

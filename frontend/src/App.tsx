@@ -1,12 +1,11 @@
-import React, { useState, useRef, FormEvent, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   FiPlus,
   FiExternalLink,
   FiTrash2,
   FiPlay,
   FiChevronDown,
-  FiChevronRight,
-  FiArrowRight,
+  FiChevronUp,
 } from "react-icons/fi";
 import { FaRegStopCircle } from "react-icons/fa";
 import {
@@ -20,9 +19,6 @@ import {
   ListImages,
   RemoveImages,
   CheckIfImageHasChildren,
-  AddPortForwardingRule,
-  RemovePortForwardingRule,
-  ListPortForwardingRules,
 } from "../wailsjs/go/main/App";
 import { main } from "wailsjs/go/models";
 import "./globals.css";
@@ -63,12 +59,21 @@ const App = () => {
     e: React.FormEvent,
     containerName: string,
     technology: string,
-    folder: string
+    folder: string,
+    port: string,
+    templateType: string
   ) => {
     e.preventDefault();
     setIsCreating(true);
     setIsFormVisible(false);
-    await CreateCodeInstance(containerName, technology, folder);
+    setActiveTab("containers");
+    await CreateCodeInstance(
+      containerName,
+      technology,
+      folder,
+      port,
+      templateType
+    );
     setIsCreating(false);
   };
 
@@ -113,11 +118,11 @@ const App = () => {
             </li>
             {/* <li
               className={`p-2 pl-4 mr-2 cursor-pointer font-bold text-lg ${
-                activeTab === "port-forwarding" ? "bg-gray-700 rounded-lg" : ""
+                activeTab === "settings" ? "bg-gray-700 rounded-lg" : ""
               }`}
-              onClick={() => handleTabClick("port-forwarding")}
+              onClick={() => handleTabClick("settings")}
             >
-              Port Forwarding
+              Settings
             </li> */}
           </ul>
         </nav>
@@ -134,13 +139,25 @@ const App = () => {
             <ContainersScreen isCreating={isCreating} />
           )}
           {activeTab === "images" && !isFormVisible && <ImagesScreen />}
-          {/* {activeTab === "port-forwarding" && !isFormVisible && (
-            <PortForwardingScreen />
-          )} */}
+          {/* {activeTab === "settings" && !isFormVisible && <SettingsScreen />} */}
           {isFormVisible && (
             <CreateForm
-              onSubmit={(e, containerName, technology, folder) =>
-                handleSubmit(e, containerName, technology, folder)
+              onSubmit={(
+                e,
+                containerName,
+                technology,
+                folder,
+                port,
+                templateType
+              ) =>
+                handleSubmit(
+                  e,
+                  containerName,
+                  technology,
+                  folder,
+                  port,
+                  templateType
+                )
               }
             />
           )}
@@ -152,17 +169,25 @@ const App = () => {
 
 interface CreateFormProps {
   onSubmit: (
-    e: FormEvent,
+    e: React.FormEvent,
     containerName: string,
     technology: string,
-    folder: string
+    folder: string,
+    ports: string,
+    templateType: string
   ) => void;
 }
 
 const CreateForm: React.FC<CreateFormProps> = ({ onSubmit }) => {
+  const [formType, setFormType] = useState<"package" | "template">("package");
   const [containerName, setContainerName] = useState("");
   const [technology, setTechnology] = useState("");
   const [folder, setFolder] = useState("");
+  const [ports, setPorts] = useState("");
+  const [templateName, setTemplateName] = useState("");
+  const [templateType, setTemplateType] = useState("");
+  const [templatePort, setTemplatePort] = useState("");
+
   const choices = [
     "NodeLTS",
     "Node18",
@@ -177,6 +202,8 @@ const CreateForm: React.FC<CreateFormProps> = ({ onSubmit }) => {
     "Java21",
   ];
 
+  const templateChoices = ["Next-js", "Next-ts", "Nest"];
+
   const handleFolderSelect = async () => {
     const selectedFolder = await SelectFolder();
     setFolder(selectedFolder);
@@ -184,65 +211,187 @@ const CreateForm: React.FC<CreateFormProps> = ({ onSubmit }) => {
 
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(e, containerName, technology, folder);
+    onSubmit(
+      e,
+      containerName || templateName,
+      technology || "none",
+      folder,
+      ports || templatePort,
+      templateType
+    );
   };
 
   return (
-    <form
-      className="rounded-lg border border-gray-300 text-white shadow-md p-4 space-y-4"
-      onSubmit={handleSubmitForm}
-    >
-      <div>
-        <label className="block text-sm font-medium" htmlFor="containerName">
-          Container Name
+    <div className="rounded-lg border border-gray-300 text-white shadow-md p-4 space-y-4">
+      <div className="flex space-x-4">
+        <label className="flex items-center">
+          <input
+            type="radio"
+            className="form-radio"
+            name="formType"
+            value="package"
+            checked={formType === "package"}
+            onChange={() => setFormType("package")}
+          />
+          <span className="ml-2">Package</span>
         </label>
-        <input
-          id="containerName"
-          type="text"
-          className="mt-1 block w-full p-2 border border-gray-300 rounded text-black"
-          value={containerName}
-          onChange={(e) => setContainerName(e.target.value)}
-          placeholder="Container Name"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium" htmlFor="technology">
-          Technology
+        <label className="flex items-center">
+          <input
+            type="radio"
+            className="form-radio"
+            name="formType"
+            value="template"
+            checked={formType === "template"}
+            onChange={() => setFormType("template")}
+          />
+          <span className="ml-2">Template</span>
         </label>
-        <select
-          id="technology"
-          className="mt-1 block w-full p-2 border border-gray-300 rounded text-black"
-          value={technology}
-          onChange={(e) => setTechnology(e.target.value)}
-          required
-        >
-          <option value="">Select Technology</option>
-          {choices.map((choice, index) => (
-            <option key={index} value={choice.toLowerCase()}>
-              {choice}
-            </option>
-          ))}
-        </select>
       </div>
-      <div>
-        <label className="block text-sm font-medium">Select Folder</label>
+      <form className="space-y-4" onSubmit={handleSubmitForm}>
+        {formType === "package" && (
+          <>
+            <div>
+              <label
+                className="block text-sm font-medium"
+                htmlFor="containerName"
+              >
+                Container Name
+              </label>
+              <input
+                id="containerName"
+                type="text"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded text-black"
+                value={containerName}
+                onChange={(e) => setContainerName(e.target.value)}
+                placeholder="Container Name"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium" htmlFor="technology">
+                Technology
+              </label>
+              <select
+                id="technology"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded text-black"
+                value={technology}
+                onChange={(e) => setTechnology(e.target.value)}
+                required
+              >
+                <option value="">Select Technology</option>
+                {choices.map((choice, index) => (
+                  <option key={index} value={choice.toLowerCase()}>
+                    {choice}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Select Folder</label>
+              <button
+                type="button"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded hover:bg-dark-gray"
+                onClick={handleFolderSelect}
+              >
+                Select Folder
+              </button>
+              {folder && <p className="text-gray-500">{folder}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium" htmlFor="ports">
+                Ports Number
+              </label>
+              <input
+                id="ports"
+                type="text"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded text-black"
+                value={ports}
+                onChange={(e) => setPorts(e.target.value)}
+                placeholder="3000"
+              />
+            </div>
+          </>
+        )}
+        {formType === "template" && (
+          <>
+            <div>
+              <label
+                className="block text-sm font-medium"
+                htmlFor="templateName"
+              >
+                Container Name
+              </label>
+              <input
+                id="containerName"
+                type="text"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded text-black"
+                value={containerName}
+                onChange={(e) => setContainerName(e.target.value)}
+                placeholder="Container Name"
+                required
+              />
+            </div>
+            <div>
+              <label
+                className="block text-sm font-medium"
+                htmlFor="templateType"
+              >
+                Template
+              </label>
+              <select
+                id="templateType"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded text-black"
+                value={templateType}
+                onChange={(e) => setTemplateType(e.target.value)}
+                required
+              >
+                <option value="">Select Template</option>
+                {templateChoices.map((choice, index) => (
+                  <option key={index} value={choice.toLowerCase()}>
+                    {choice}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Select Folder</label>
+              <button
+                type="button"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded hover:bg-dark-gray"
+                onClick={handleFolderSelect}
+              >
+                Select Folder
+              </button>
+              {folder && <p className="text-gray-500">{folder}</p>}
+            </div>
+            <div>
+              <label
+                className="block text-sm font-medium"
+                htmlFor="templatePort"
+              >
+                Port Number
+              </label>
+              <input
+                id="ports"
+                type="text"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded text-black"
+                value={ports}
+                onChange={(e) => setPorts(e.target.value)}
+                placeholder="3000"
+                required
+              />
+            </div>
+          </>
+        )}
         <button
-          type="button"
-          className="mt-1 block w-full p-2 border border-gray-300 rounded hover:bg-dark-gray"
-          onClick={handleFolderSelect}
+          type="submit"
+          className="block w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          onClick={handleSubmitForm}
         >
-          Select Folder
+          Create
         </button>
-        {folder && <p className="text-gray-500">{folder}</p>}
-      </div>
-      <button
-        type="submit"
-        className="block w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-      >
-        Create
-      </button>
-    </form>
+      </form>
+    </div>
   );
 };
 
@@ -271,7 +420,7 @@ const ContainersScreen: React.FC<{ isCreating: boolean }> = ({
     >
       <h2 className="text-2xl font-bold mb-4">Containers</h2>
       {containers.length === 0 ? (
-        <div className="flex-grow flex items-center justify-center">
+        <div className="flex-grow flex items-center justify-center pointer-events-none">
           <h1 className="opacity-50 text-2xl">No containers</h1>
         </div>
       ) : (
@@ -295,10 +444,10 @@ const PlaceholderCard: React.FC<{ isCreating: boolean }> = ({ isCreating }) => (
     <div>
       <p className="font-bold text-gray-400">Creating Container...</p>
       <p className="opacity-50 text-gray-400">ID: --</p>
-      <p className="opacity-50 text-gray-400">Image: --</p>
+      {/* <p className="opacity-50 text-gray-400">Image: --</p>
       <p className="opacity-50 text-gray-400">Volume: --</p>
       <p className="opacity-50 text-gray-400">Created At: --</p>
-      <p className="font-semibold text-gray-400">Status: --</p>
+      <p className="font-semibold text-gray-400">Status: --</p> */}
     </div>
     {isCreating && (
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r rounded-md from-white to-transparent pointer-events-none opacity-50 animate-ray" />
@@ -309,6 +458,8 @@ const PlaceholderCard: React.FC<{ isCreating: boolean }> = ({ isCreating }) => (
 const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
   container,
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const handleDeleteClick = async (id: string, status: string) => {
     if (status !== "Exited") {
       if (
@@ -322,77 +473,117 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
       await RemoveContainer(id, false);
     }
   };
+
   const handleControlClick = async (name: string, status: string) => {
     if (status !== "Exited") {
       // Stop container
       await StopContainer(name);
     } else {
       // Start container
-      await StartContainer(name);
+      const exposePort = window.confirm(
+        "Do you want to expose any ports? Click OK to enter port numbers or Cancel to skip."
+      );
+      let ports = "";
+      if (exposePort) {
+        ports =
+          window.prompt(
+            "Enter the port numbers to expose, separated by commas (e.g., 8080,443):"
+          ) || "";
+      }
+      await StartContainer(name, ports);
     }
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-md flex justify-between items-center relative">
-      <div>
-        <p className="font-bold">
-          {container.name.length > 0 ? container.name : "No Name"}
-        </p>
-        <p className="opacity-50">ID: {container.id.slice(0, 10)}</p>
-        <p className="opacity-50">Image: {container.image}</p>
-        <p className="opacity-50">Volume: {container.volume || "N/A"}</p>
-        <p className="opacity-50">Created At: {container.created}</p>
-        <p
-          className={`font-semibold ${
-            container.status === "running"
-              ? "text-green-500"
-              : container.status.slice(0, 6) === "Exited"
-              ? "text-red-500"
-              : "text-green-500"
+    <div className="bg-gray-800 p-4 rounded-md flex flex-col justify-between items-start relative w-full md:flex-row md:items-center">
+      <div className="flex-1">
+        <div
+          className="flex justify-between items-center cursor-pointer"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <div>
+            <p className="font-bold text-xl">
+              {container.name.length > 0 ? container.name : "No Name"}
+            </p>
+          </div>
+          <div className="flex items-center">
+            <div className="flex space-x-4">
+              {container.status.slice(0, 6) !== "Exited" ? (
+                <FaRegStopCircle
+                  className="h-6 w-6 text-red-500 cursor-pointer"
+                  onClick={() =>
+                    handleControlClick(
+                      container.id.slice(0, 9),
+                      container.status.slice(0, 6)
+                    )
+                  }
+                />
+              ) : (
+                <FiPlay
+                  className="h-6 w-6 text-green-500 cursor-pointer"
+                  onClick={() =>
+                    handleControlClick(
+                      container.name,
+                      container.status.slice(0, 6)
+                    )
+                  }
+                />
+              )}
+              <FiTrash2
+                className="h-6 w-6 text-red-500 cursor-pointer"
+                onClick={() =>
+                  handleDeleteClick(
+                    container.name,
+                    container.status.slice(0, 6)
+                  )
+                }
+              />
+              {container.url && container.status.slice(0, 6) !== "Exited" ? (
+                <a
+                  onClick={async () => {
+                    await URL(container.url);
+                  }}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white hover:text-blue-500 hover:cursor-pointer"
+                >
+                  <FiExternalLink className="w-6 h-6" />
+                </a>
+              ) : (
+                <FiExternalLink className="text-gray-400 w-6 h-6" />
+              )}
+            </div>
+            {isOpen ? (
+              <FiChevronUp className="w-7 h-7 ml-4 mt-1" />
+            ) : (
+              <FiChevronDown className="w-7 h-7 ml-4 mt-1" />
+            )}
+          </div>
+        </div>
+        <div
+          className={`mt-2 transition-max-height duration-300 ease-in-out overflow-hidden ${
+            isOpen ? "max-h-screen" : "max-h-0"
           }`}
         >
-          Status: {container.status}
-        </p>
-      </div>
-      <div className="flex space-x-4">
-        {container.status.slice(0, 6) !== "Exited" ? (
-          <FaRegStopCircle
-            className="h-6 w-6 text-red-500 cursor-pointer"
-            onClick={() =>
-              handleControlClick(
-                container.id.slice(0, 9),
-                container.status.slice(0, 6)
-              )
-            }
-          />
-        ) : (
-          <FiPlay
-            className="h-6 w-6 text-green-500 cursor-pointer"
-            onClick={() =>
-              handleControlClick(container.name, container.status.slice(0, 6))
-            }
-          />
-        )}
-        <FiTrash2
-          className="h-6 w-6 text-red-500 cursor-pointer"
-          onClick={() =>
-            handleDeleteClick(container.name, container.status.slice(0, 6))
-          }
-        />
-        {container.url && container.status.slice(0, 6) !== "Exited" ? (
-          <a
-            onClick={async () => {
-              await URL(container.url);
-            }}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:text-blue-500 hover:cursor-pointer"
+          <p className="opacity-50">Id: {container.id.slice(0, 10)}</p>
+          <p className="opacity-50">Image: {container.image}</p>
+          <p className="opacity-50">Volume: {container.volume || "N/A"}</p>
+          <p className="opacity-50">Created At: {container.created}</p>
+          <p className="opacity-50">
+            Ports: {container.public_ports.join(", ")}
+          </p>
+          <p
+            className={`font-semibold ${
+              container.status === "running"
+                ? "text-green-500"
+                : container.status.slice(0, 6) === "Exited"
+                ? "text-red-500"
+                : "text-green-500"
+            }`}
           >
-            <FiExternalLink className="w-6 h-6" />
-          </a>
-        ) : (
-          <FiExternalLink className="text-gray-400 w-6 h-6" />
-        )}
+            Status: {container.status}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -421,7 +612,7 @@ const ImagesScreen = () => {
     >
       <h2 className="text-2xl font-bold mb-4">Images</h2>
       {images && images.length === 0 ? (
-        <div className="flex-grow flex items-center justify-center">
+        <div className="flex-grow flex items-center justify-center pointer-events-none">
           <h1 className="opacity-50 text-2xl">No images</h1>
         </div>
       ) : (
@@ -438,9 +629,12 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
   const [childImageCheck, setChildImageCheck] = useState<{
     [key: string]: boolean;
   }>({});
+  const [expandedCards, setExpandedCards] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   useEffect(() => {
-    const checkImageUsage = async () => {
+    const fetchImageData = async () => {
       try {
         const containers = await ListAllContainersJSON();
         const usedIds = containers
@@ -449,22 +643,19 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
             container.image_id.replace("sha256:", "").slice(0, 10)
           );
         setUsedImages(usedIds);
+
+        const childCheckResults: { [key: string]: boolean } = {};
+        for (const image of images) {
+          const hasChildren = await CheckIfImageHasChildren(image.image_id);
+          childCheckResults[image.image_id] = hasChildren;
+        }
+        setChildImageCheck(childCheckResults);
       } catch (error) {
-        console.error("Error checking container usage:", error);
+        console.error("Error fetching image data:", error);
       }
     };
 
-    const checkChildImages = async () => {
-      const childCheckResults: { [key: string]: boolean } = {};
-      for (const image of images) {
-        const hasChildren = await CheckIfImageHasChildren(image.image_id);
-        childCheckResults[image.image_id] = hasChildren;
-      }
-      setChildImageCheck(childCheckResults);
-    };
-
-    checkImageUsage();
-    checkChildImages();
+    fetchImageData();
   }, [images]);
 
   const isImageUsed = (imageId: string) => usedImages.includes(imageId);
@@ -488,28 +679,54 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
     }
   };
 
+  const toggleCard = (imageId: string) => {
+    setExpandedCards((prev) => ({
+      ...prev,
+      [imageId]: !prev[imageId],
+    }));
+  };
+
   return (
     <>
       {images.map((image) => (
         <div
           key={image.image_id}
-          className="bg-gray-800 p-4 rounded-md flex justify-between items-center relative"
+          className="bg-gray-800 p-4 rounded-md mb-2 cursor-pointer"
+          onClick={() => toggleCard(image.image_id)}
         >
-          <div>
-            <p className="font-bold">{image.repository}</p>
-            <p className="opacity-50">Tag: {image.tag}</p>
-            <p className="opacity-50">ID: {image.image_id}</p>
-            <p className="opacity-50">Size: {image.size}</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="font-bold text-xl">{image.repository}</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <FiTrash2
+                className={`h-6 w-6 text-red-500 cursor-pointer ${
+                  isImageUsed(image.image_id) || hasChildImages(image.image_id)
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteClick(image.image_id);
+                }}
+              />
+              {expandedCards[image.image_id] ? (
+                <FiChevronUp className="h-6 w-6 text-white" />
+              ) : (
+                <FiChevronDown className="h-6 w-6 text-white" />
+              )}
+            </div>
           </div>
-          <div className="flex space-x-4">
-            <FiTrash2
-              className={`h-6 w-6 text-red-500 cursor-pointer ${
-                isImageUsed(image.image_id) || hasChildImages(image.image_id)
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
-              }`}
-              onClick={() => handleDeleteClick(image.image_id)}
-            />
+          <div
+            className={`overflow-hidden transition-all duration-300 ${
+              expandedCards[image.image_id] ? "max-h-96" : "max-h-0"
+            }`}
+          >
+            <div className="mt-2">
+              <p className="opacity-50">Tag: {image.tag}</p>
+              <p className="opacity-50">ID: {image.image_id}</p>
+              <p className="opacity-50">Size: {image.size}</p>
+            </div>
           </div>
         </div>
       ))}
@@ -517,179 +734,58 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
   );
 };
 
-// PortForwarding
+const SettingsScreen: React.FC = () => {
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
-const PortForwardingScreen: React.FC = () => {
-  const [rules, setRules] = useState<main.PortForwardingRule[]>([]);
-  const [newRule, setNewRule] = useState({
-    containerId: "",
-    containerPort: "",
-    hostPort: "",
-  });
-  const [expandedContainers, setExpandedContainers] = useState<string[]>([]);
-  const [containers, setContainers] = useState<
-    { containerId: string; containerName: string }[]
-  >([]);
-
-  const fetchRules = async () => {
-    const fetchedRules = await ListPortForwardingRules();
-    setRules(fetchedRules || []);
-    const containerList = fetchedRules.map((rule) => ({
-      containerId: rule.container_id,
-      containerName: rule.container_name,
-    }));
-    setContainers(containerList);
+  const handleNotificationsToggle = () => {
+    setNotificationsEnabled((prev) => !prev);
   };
 
-  useEffect(() => {
-    fetchRules();
-  }, []);
-
-  const handleAddRule = async (containerId: string) => {
-    if (newRule.containerPort && newRule.hostPort) {
-      await AddPortForwardingRule(
-        containerId,
-        newRule.containerPort,
-        newRule.hostPort
-      );
-      setNewRule({ containerId: "", containerPort: "", hostPort: "" });
-      fetchRules();
-    }
+  const handleDarkModeToggle = () => {
+    setDarkModeEnabled((prev) => !prev);
+    // You can add logic here to toggle dark mode in your app
   };
-
-  const handleRemoveRule = async (
-    containerId: string,
-    containerPort: string,
-    hostPort: string
-  ) => {
-    // await RemovePortForwardingRule(containerId, containerPort, hostPort);
-    fetchRules();
-  };
-
-  const toggleContainer = (containerId: string) => {
-    setExpandedContainers((prev) =>
-      prev.includes(containerId)
-        ? prev.filter((id) => id !== containerId)
-        : [...prev, containerId]
-    );
-  };
-
-  const groupRulesByContainer = () => {
-    return rules.reduce((acc, rule) => {
-      if (!acc[rule.container_id]) {
-        acc[rule.container_id] = {
-          containerName: rule.container_name,
-          rules: [],
-        };
-      }
-      acc[rule.container_id].rules.push(rule);
-      return acc;
-    }, {} as Record<string, { containerName: string; rules: main.PortForwardingRule[] }>);
-  };
-
-  const groupedRules = groupRulesByContainer();
 
   return (
-    <div className="h-full flex flex-col">
-      <h2 className="text-2xl font-bold mb-4">Port Forwarding</h2>
-      <div className="space-y-4">
-        <div className="border border-gray-300 rounded p-4 space-y-2">
-          <h3 className="text-xl font-bold">Existing Rules</h3>
-          {Object.keys(groupedRules).length === 0 ? (
-            <p>No port forwarding rules found</p>
-          ) : (
-            Object.keys(groupedRules).map((containerId) => (
-              <div key={containerId} className="border-b border-gray-300 pb-2">
-                <div
-                  className="flex justify-between items-center cursor-pointer"
-                  onClick={() => toggleContainer(containerId)}
-                >
-                  <span className="font-bold">
-                    {groupedRules[containerId].containerName}
-                  </span>
-                  {expandedContainers.includes(containerId) ? (
-                    <FiChevronDown />
-                  ) : (
-                    <FiChevronRight />
-                  )}
-                </div>
-                {expandedContainers.includes(containerId) && (
-                  <div className="pl-4 space-y-2">
-                    {groupedRules[containerId].rules.map((rule) => (
-                      <div
-                        key={`${rule.container_id}-${rule.container_port}-${rule.host_port}`}
-                        className="flex justify-between items-center"
-                      >
-                        <div className="flex items-center">
-                          <span>{rule.container_port}</span>
-                          <FiArrowRight />
-                          <span>{rule.host_port}</span>
-                        </div>
-                        <button
-                          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                          onClick={() =>
-                            handleRemoveRule(
-                              rule.container_id,
-                              rule.container_port,
-                              rule.host_port
-                            )
-                          }
-                        >
-                          <FiTrash2 />
-                        </button>
-                      </div>
-                    ))}
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        className="w-1/3 p-2 border border-gray-300 rounded text-black"
-                        placeholder="Container Port"
-                        value={newRule.containerPort}
-                        onChange={(e) =>
-                          setNewRule({
-                            ...newRule,
-                            containerPort: e.target.value,
-                            containerId,
-                          })
-                        }
-                        onKeyDown={(e) => {
-                          if (isNaN(Number(e.key))) {
-                            e.preventDefault();
-                          }
-                        }}
-                      />
-                      <input
-                        type="text"
-                        className="w-1/3 p-2 border border-gray-300 rounded text-black"
-                        placeholder="Host Port"
-                        value={newRule.hostPort}
-                        onChange={(e) =>
-                          setNewRule({
-                            ...newRule,
-                            hostPort: e.target.value,
-                            containerId,
-                          })
-                        }
-                        onKeyDown={(e) => {
-                          if (isNaN(Number(e.key))) {
-                            e.preventDefault();
-                          }
-                        }}
-                      />
-                      <button
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                        onClick={() => handleAddRule(containerId)}
-                      >
-                        Add
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+    <div style={{ maxWidth: 400, margin: "auto", padding: 16 }}>
+      <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
+        Settings
+      </h1>
+      <label
+        style={{ display: "flex", alignItems: "center", marginBottom: 16 }}
+      >
+        <input
+          type="checkbox"
+          checked={notificationsEnabled}
+          onChange={handleNotificationsToggle}
+        />
+        Enable Notifications
+      </label>
+      <label
+        style={{ display: "flex", alignItems: "center", marginBottom: 16 }}
+      >
+        <input
+          type="checkbox"
+          checked={darkModeEnabled}
+          onChange={handleDarkModeToggle}
+        />
+        Dark Mode
+      </label>
+      <button
+        onClick={handleDarkModeToggle}
+        disabled={darkModeEnabled}
+        style={{
+          padding: "8px 16px",
+          fontSize: 16,
+          cursor: "pointer",
+          marginTop: 16,
+        }}
+      >
+        {darkModeEnabled
+          ? "Cleaning up..."
+          : "Clean up inactive containers and images older than 1 week"}
+      </button>
     </div>
   );
 };
