@@ -8,6 +8,7 @@ import {
   FiChevronUp,
 } from "react-icons/fi";
 import { FaRegStopCircle } from "react-icons/fa";
+import { IoSunny, IoMoon } from "react-icons/io5";
 import {
   SelectFolder,
   ListAllContainersJSON,
@@ -29,6 +30,9 @@ const App = () => {
   const isDragging = useRef(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
 
   const handleMouseMove = (e: MouseEvent) => {
     if (isDragging.current) {
@@ -82,15 +86,29 @@ const App = () => {
     setIsFormVisible(false); // Close the form when switching tabs
   };
 
+  const handleThemeToggle = () => {
+    const newTheme = isDarkMode ? "light" : "dark";
+    setIsDarkMode(!isDarkMode);
+    localStorage.setItem("theme", newTheme);
+  };
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDarkMode);
+  }, [isDarkMode]);
+
   return (
     <div className="flex h-screen select-none">
       <aside
-        className={`relative bg-dark-gray text-white p-2 pt-4 `}
+        className={`relative ${
+          isDarkMode ? "bg-dark-gray" : "bg-light-white"
+        } p-2 pt-4 `}
         style={{ width: `${sidebarWidth}%` }}
       >
         <div className="flex items-center justify-center mb-4">
           <button
-            className="bg-blue-700 py-2 px-4 rounded-full flex items-center hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-700"
+            className={`${
+              isDarkMode ? "bg-blue-700" : "bg-blue-500"
+            } py-2 px-4 rounded-full flex items-center hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-700`}
             onClick={handleCreateClick}
             disabled={isCreating}
           >
@@ -102,7 +120,13 @@ const App = () => {
           <ul>
             <li
               className={`p-2 pl-4 mr-2 cursor-pointer font-bold text-lg ${
-                activeTab === "containers" ? "bg-gray-700 rounded-lg" : ""
+                activeTab === "containers"
+                  ? `${
+                      isDarkMode
+                        ? "bg-gray-700 rounded-lg"
+                        : "bg-gray-400 rounded-lg"
+                    }`
+                  : ""
               }`}
               onClick={() => handleTabClick("containers")}
             >
@@ -110,7 +134,13 @@ const App = () => {
             </li>
             <li
               className={`p-2 pl-4 mr-2 cursor-pointer font-bold text-lg ${
-                activeTab === "images" ? "bg-gray-700 rounded-lg" : ""
+                activeTab === "images"
+                  ? `${
+                      isDarkMode
+                        ? "bg-gray-700 rounded-lg"
+                        : "bg-gray-400 rounded-lg"
+                    }`
+                  : ""
               }`}
               onClick={() => handleTabClick("images")}
             >
@@ -127,18 +157,36 @@ const App = () => {
           </ul>
         </nav>
         <div
-          className={`absolute top-0 right-0 w-[2px] h-full cursor-ew-resize bg-gray-600 ${
-            isCreating ? "pointer-events-none" : ""
-          }`}
+          className={`absolute top-0 right-0 w-[2px] h-full cursor-ew-resize ${
+            isDarkMode ? "bg-gray-600" : "bg-gray-400"
+          } ${isCreating ? "pointer-events-none" : ""}`}
           onMouseDown={handleMouseDown}
         />
+        <button
+          className={`absolute bottom-4 left-4 p-2 ${
+            isDarkMode ? "bg-gray-800" : "bg-light-gray"
+          } rounded-full focus:outline-none`}
+          onClick={handleThemeToggle}
+        >
+          {isDarkMode ? (
+            <IoSunny className="text-yellow-500" />
+          ) : (
+            <IoMoon className="text-blue-500" />
+          )}
+        </button>
       </aside>
-      <main className="flex-1 bg-deep-dark text-white p-4 overflow-auto">
+      <main
+        className={`flex-1 ${
+          isDarkMode ? "bg-deep-dark" : "bg-light-gray"
+        } p-4 overflow-auto`}
+      >
         <>
           {activeTab === "containers" && !isFormVisible && (
-            <ContainersScreen isCreating={isCreating} />
+            <ContainersScreen isCreating={isCreating} isDarkMode={isDarkMode} />
           )}
-          {activeTab === "images" && !isFormVisible && <ImagesScreen />}
+          {activeTab === "images" && !isFormVisible && (
+            <ImagesScreen isDarkMode={isDarkMode} />
+          )}
           {/* {activeTab === "settings" && !isFormVisible && <SettingsScreen />} */}
           {isFormVisible && (
             <CreateForm
@@ -395,9 +443,10 @@ const CreateForm: React.FC<CreateFormProps> = ({ onSubmit }) => {
   );
 };
 
-const ContainersScreen: React.FC<{ isCreating: boolean }> = ({
-  isCreating,
-}) => {
+const ContainersScreen: React.FC<{
+  isCreating: boolean;
+  isDarkMode: boolean;
+}> = ({ isCreating, isDarkMode }) => {
   const [containers, setContainers] = useState<main.containerDetail[]>([]);
 
   const handleContainer = async () => {
@@ -427,7 +476,11 @@ const ContainersScreen: React.FC<{ isCreating: boolean }> = ({
         <div className="flex-grow overflow-auto space-y-4">
           {isCreating ? <PlaceholderCard isCreating={isCreating} /> : null}
           {containers.map((container, index) => (
-            <ContainerCard key={index} container={container} />
+            <ContainerCard
+              key={index}
+              container={container}
+              isDarkMode={isDarkMode}
+            />
           ))}
         </div>
       )}
@@ -455,9 +508,10 @@ const PlaceholderCard: React.FC<{ isCreating: boolean }> = ({ isCreating }) => (
   </div>
 );
 
-const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
-  container,
-}) => {
+const ContainerCard: React.FC<{
+  container: main.containerDetail;
+  isDarkMode: boolean;
+}> = ({ container, isDarkMode }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleDeleteClick = async (
@@ -505,7 +559,11 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-md flex flex-col justify-between items-start relative w-full md:flex-row md:items-center">
+    <div
+      className={`${
+        isDarkMode ? "bg-gray-800 " : "bg-gray-500"
+      } p-4 rounded-md flex flex-col justify-between items-start relative w-full md:flex-row md:items-center`}
+    >
       <div className="flex-1">
         <div
           className="flex justify-between items-center cursor-pointer"
@@ -531,7 +589,9 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
                 />
               ) : (
                 <FiPlay
-                  className="h-6 w-6 text-green-500 cursor-pointer"
+                  className={`h-6 w-6 ${
+                    isDarkMode ? "text-green-500" : "text-green-500"
+                  } cursor-pointer`}
                   onClick={(event) =>
                     handleControlClick(
                       container.name,
@@ -542,7 +602,9 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
                 />
               )}
               <FiTrash2
-                className="h-6 w-6 text-red-500 cursor-pointer"
+                className={`h-6 w-6 ${
+                  isDarkMode ? "text-red-500" : "text-red-600"
+                } cursor-pointer`}
                 onClick={(event) =>
                   handleDeleteClick(
                     container.name,
@@ -592,7 +654,7 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
               container.status === "running"
                 ? "text-green-500"
                 : container.status.slice(0, 6) === "Exited"
-                ? "text-red-500"
+                ? `${isDarkMode ? "text-red-500" : "text-red-700"}`
                 : "text-green-500"
             }`}
           >
@@ -604,7 +666,9 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
   );
 };
 
-const ImagesScreen = () => {
+const ImagesScreen: React.FC<{
+  isDarkMode: boolean;
+}> = ({ isDarkMode }) => {
   const [images, setImages] = useState<main.imageDetail[]>([]);
 
   const handleImages = async () => {
@@ -632,14 +696,17 @@ const ImagesScreen = () => {
         </div>
       ) : (
         <div className="flex-grow overflow-auto space-y-4">
-          <ImageCard images={images} />
+          <ImageCard images={images} isDarkMode={isDarkMode} />
         </div>
       )}
     </div>
   );
 };
 
-const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
+const ImageCard: React.FC<{
+  images: main.imageDetail[];
+  isDarkMode: boolean;
+}> = ({ images, isDarkMode }) => {
   const [usedImages, setUsedImages] = useState<string[]>([]);
   const [childImageCheck, setChildImageCheck] = useState<{
     [key: string]: boolean;
@@ -706,7 +773,9 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
       {images.map((image) => (
         <div
           key={image.image_id}
-          className="bg-gray-800 p-4 rounded-md mb-2 cursor-pointer"
+          className={`${
+            isDarkMode ? "bg-gray-800 " : "bg-gray-500"
+          } p-4 rounded-md mb-2 cursor-pointer`}
           onClick={() => toggleCard(image.image_id)}
         >
           <div className="flex justify-between items-center">
@@ -715,7 +784,9 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
             </div>
             <div className="flex items-center space-x-4">
               <FiTrash2
-                className={`h-6 w-6 text-red-500 cursor-pointer ${
+                className={`h-6 w-6 ${
+                  isDarkMode ? "text-red-500" : "text-red-600"
+                } cursor-pointer ${
                   isImageUsed(image.image_id) || hasChildImages(image.image_id)
                     ? "opacity-50 cursor-not-allowed"
                     : ""
@@ -726,9 +797,9 @@ const ImageCard: React.FC<{ images: main.imageDetail[] }> = ({ images }) => {
                 }}
               />
               {expandedCards[image.image_id] ? (
-                <FiChevronUp className="h-6 w-6 text-white" />
+                <FiChevronUp className="h-6 w-6" />
               ) : (
-                <FiChevronDown className="h-6 w-6 text-white" />
+                <FiChevronDown className="h-6 w-6" />
               )}
             </div>
           </div>
