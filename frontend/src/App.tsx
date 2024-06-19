@@ -460,7 +460,12 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleDeleteClick = async (id: string, status: string) => {
+  const handleDeleteClick = async (
+    id: string,
+    status: string,
+    event: React.MouseEvent
+  ) => {
+    event.stopPropagation();
     if (status !== "Exited") {
       if (
         window.confirm(
@@ -474,7 +479,12 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
     }
   };
 
-  const handleControlClick = async (name: string, status: string) => {
+  const handleControlClick = async (
+    name: string,
+    status: string,
+    event: React.MouseEvent
+  ) => {
+    event.stopPropagation();
     if (status !== "Exited") {
       // Stop container
       await StopContainer(name);
@@ -511,36 +521,40 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
               {container.status.slice(0, 6) !== "Exited" ? (
                 <FaRegStopCircle
                   className="h-6 w-6 text-red-500 cursor-pointer"
-                  onClick={() =>
+                  onClick={(event) =>
                     handleControlClick(
                       container.id.slice(0, 9),
-                      container.status.slice(0, 6)
+                      container.status.slice(0, 6),
+                      event
                     )
                   }
                 />
               ) : (
                 <FiPlay
                   className="h-6 w-6 text-green-500 cursor-pointer"
-                  onClick={() =>
+                  onClick={(event) =>
                     handleControlClick(
                       container.name,
-                      container.status.slice(0, 6)
+                      container.status.slice(0, 6),
+                      event
                     )
                   }
                 />
               )}
               <FiTrash2
                 className="h-6 w-6 text-red-500 cursor-pointer"
-                onClick={() =>
+                onClick={(event) =>
                   handleDeleteClick(
                     container.name,
-                    container.status.slice(0, 6)
+                    container.status.slice(0, 6),
+                    event
                   )
                 }
               />
               {container.url && container.status.slice(0, 6) !== "Exited" ? (
                 <a
-                  onClick={async () => {
+                  onClick={async (event) => {
+                    event.stopPropagation();
                     await URL(container.url);
                   }}
                   target="_blank"
@@ -550,7 +564,7 @@ const ContainerCard: React.FC<{ container: main.containerDetail }> = ({
                   <FiExternalLink className="w-6 h-6" />
                 </a>
               ) : (
-                <FiExternalLink className="text-gray-400 w-6 h-6" />
+                <FiExternalLink className="text-gray-400 w-6 h-6 cursor-not-allowed" />
               )}
             </div>
             {isOpen ? (

@@ -35,6 +35,14 @@ check_installations() {
         echo -e "${GREEN}Docker is installed.${NC}"
     fi
 
+    if ! docker buildx version >/dev/null 2>&1; then
+        echo -e "${RED}Docker Buildx is not installed or not configured.${NC}"
+        echo "Please install Docker Buildx from https://docs.docker.com/buildx/working-with-buildx/"
+        INSTALL_BUILDX=true
+    else
+        echo -e "${GREEN}Docker Buildx is installed.${NC}"
+    fi
+
     if ! pkg-config --exists webkit2gtk-4.0; then
         echo -e "${RED}webkit2gtk is not installed.${NC}"
         INSTALL_WEBKIT=true
@@ -50,7 +58,7 @@ check_installations() {
         echo -e "${GREEN}Go is installed.${NC}"
     fi
 
-    if [ "$INSTALL_DOCKER" = true ] || [ "$INSTALL_GO" = true ] || [ "$INSTALL_WEBKIT" = true ]; then
+    if [ "$INSTALL_DOCKER" = true ] || [ "$INSTALL_BUILDX" = true ] || [ "$INSTALL_GO" = true ] || [ "$INSTALL_WEBKIT" = true ]; then
         echo -e "\n${YELLOW}Please install the missing dependencies and run the script again.${NC}"
         exit 1
     fi
