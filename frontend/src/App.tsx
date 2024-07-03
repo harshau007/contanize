@@ -23,6 +23,7 @@ import {
 } from "../wailsjs/go/main/App";
 import { main } from "wailsjs/go/models";
 import "./globals.css";
+import "@fontsource/geist-sans";
 
 const App = () => {
   const [activeTab, setActiveTab] = useState("containers");
@@ -157,14 +158,14 @@ const App = () => {
           </ul>
         </nav>
         <div
-          className={`absolute top-0 right-0 w-[2px] h-full cursor-ew-resize ${
+          className={`absolute top-0 right-0 w-[1px] h-full cursor-ew-resize ${
             isDarkMode ? "bg-gray-600" : "bg-gray-400"
           } ${isCreating ? "pointer-events-none" : ""}`}
           onMouseDown={handleMouseDown}
         />
         <button
           className={`absolute bottom-4 left-4 p-2 ${
-            isDarkMode ? "bg-gray-800" : "bg-light-gray"
+            isDarkMode ? "bg-deep-dark" : "bg-light-white"
           } rounded-full focus:outline-none`}
           onClick={handleThemeToggle}
         >
