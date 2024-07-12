@@ -160,6 +160,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 			PublicPorts: publicPorts,
 		})
 	}
+	// fmt.Println(containerInfo)
 	return containerInfo
 }
 
