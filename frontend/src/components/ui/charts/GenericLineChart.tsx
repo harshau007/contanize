@@ -1,3 +1,4 @@
+import React from "react";
 import {
   CartesianGrid,
   Line,
@@ -15,6 +16,7 @@ interface GenericLineChartProps {
   dataKey: string;
   title: string;
   color: string;
+  status: string; // New prop for container status
   yAxisDomain?: [number, number];
   tooltipFormatter?: (value: number) => string;
 }
@@ -24,6 +26,7 @@ export function GenericLineChart({
   dataKey,
   title,
   color,
+  status,
   yAxisDomain,
   tooltipFormatter = (value) => `${value}`,
 }: GenericLineChartProps) {
@@ -40,38 +43,42 @@ export function GenericLineChart({
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
-          <ResponsiveContainer width="100%" height="300px">
-            <LineChart
-              data={data}
-              margin={{
-                top: 5,
-                right: 10,
-                bottom: 5,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="time"
-                tickMargin={8}
-                tickFormatter={(value) => value.slice(11, 19)}
-              />
-              <YAxis domain={yAxisDomain} />
-              <Tooltip
-                formatter={tooltipFormatter}
-                content={<ChartTooltipContent hideLabel />}
-              />
-              <Line
-                type="monotone"
-                dataKey={dataKey}
-                stroke={color}
-                strokeWidth={2}
-                dot={true}
-                activeDot
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+        {status === "Exited" ? (
+          <div className="flex justify-center items-center h-72 text-gray-500">
+            Inactive Container
+          </div>
+        ) : (
+          <ChartContainer config={chartConfig}>
+            <ResponsiveContainer width="100%">
+              <LineChart
+                data={data}
+                margin={{
+                  top: 5,
+                  right: 10,
+                  bottom: 5,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="time"
+                  tickMargin={8}
+                  tickFormatter={(value) => value.slice(11, 19)}
+                />
+                <YAxis domain={yAxisDomain} />
+                <Tooltip
+                  formatter={tooltipFormatter}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Line
+                  type="monotone"
+                  dataKey={dataKey}
+                  stroke={color}
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

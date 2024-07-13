@@ -9,8 +9,18 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  Tooltip as ShadTooltip,
+} from "./ui/tooltip";
 import { main } from "../../wailsjs/go/models";
-import { GetImageLayerSize } from "../../wailsjs/go/main/App";
+import {
+  GetImageLayerSize,
+  ListAllContainersJSON,
+  RemoveImages,
+} from "../../wailsjs/go/main/App";
 
 interface ImageDetailsProps {
   image: main.imageDetail;
@@ -25,6 +35,7 @@ const chartConfig = {
 
 const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
   const [imageLayerInfo, setImageLayerInfo] = useState<main.LayerInfo[]>();
+  const [usedImages, setUsedImages] = useState<string[]>([]);
 
   const handleImagerLayer = async () => {
     const layerResp = await GetImageLayerSize(image.repository);
@@ -36,13 +47,33 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
     setImageLayerInfo(layerResp);
   };
 
+  const handleDelete = async (id: string) => {
+    await RemoveImages(id, true, true);
+  };
+
   useEffect(() => {
+    const fetchUsedImage = async () => {
+      try {
+        const containers = await ListAllContainersJSON();
+        const usedIds = containers
+          .filter((container) => container.status !== "Exited")
+          .map((container) =>
+            container.image_id.replace("sha256:", "").slice(0, 10)
+          );
+        setUsedImages(usedIds);
+      } catch (error) {
+        console.error("Error fetching image data:", error);
+      }
+    };
+    fetchUsedImage();
     handleImagerLayer();
     const interval = setInterval(() => {
       handleImagerLayer();
     }, 3000);
     return () => clearInterval(interval);
-  });
+  }, [image]);
+
+  const isImageUsed = (imageId: string) => usedImages.includes(imageId);
 
   return (
     <div className="space-y-4">
@@ -52,9 +83,29 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
             <span>
               {image.repository}:{image.tag}
             </span>
-            <Button variant="outline" size="icon">
-              <FiTrash2 />
-            </Button>
+            <TooltipProvider>
+              <ShadTooltip>
+                <TooltipTrigger>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`${
+                      isImageUsed(image.image_id)
+                        ? "opacity-50 pointer-events-none"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      handleDelete(image.image_id);
+                    }}
+                  >
+                    <FiTrash2 />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Remove</p>
+                </TooltipContent>
+              </ShadTooltip>
+            </TooltipProvider>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -80,7 +131,7 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
         <CardHeader>
           <CardTitle>Layer Sizes</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="h-75">
           <ChartContainer config={chartConfig}>
             <BarChart
               accessibilityLayer

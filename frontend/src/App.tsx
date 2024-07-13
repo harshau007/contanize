@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
 import { ScrollArea } from "./components/ui/scroll-area";
@@ -13,12 +13,8 @@ import "./globals.css";
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("containers");
-  const [selectedImage, setSelectedImage] = useState<main.imageDetail | null>(
-    null
-  );
-  const [selectedCont, setSelectedCont] = useState<main.containerDetail | null>(
-    null
-  );
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [selectedContId, setSelectedContId] = useState<string | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(
     () => localStorage.getItem("theme") === "dark"
@@ -26,39 +22,37 @@ const App: React.FC = () => {
   const [containers, setContainers] = useState<main.containerDetail[]>([]);
   const [images, setImages] = useState<main.imageDetail[]>([]);
 
-  const isInitialMount = useRef(true);
-
-  const handleContainer = async () => {
-    const containerData = await ListAllContainersJSON();
-    setContainers(containerData || []);
-  };
-
-  const handleImages = async () => {
-    const imageData = await ListImages();
-    setImages(imageData || []);
-  };
+  const fetchData = useCallback(async () => {
+    try {
+      if (activeTab === "containers") {
+        const containerData = await ListAllContainersJSON();
+        setContainers((prevContainers) => {
+          if (
+            JSON.stringify(prevContainers) !== JSON.stringify(containerData)
+          ) {
+            return containerData || [];
+          }
+          return prevContainers;
+        });
+      } else {
+        const imageData = await ListImages();
+        setImages((prevImages) => {
+          if (JSON.stringify(prevImages) !== JSON.stringify(imageData)) {
+            return imageData || [];
+          }
+          return prevImages;
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      await handleContainer();
-      await handleImages();
-
-      if (isInitialMount.current) {
-        if (containers.length > 0 && !selectedCont) {
-          setSelectedCont(containers[0]);
-        }
-        if (images.length > 0 && !selectedImage) {
-          setSelectedImage(images[0]);
-        }
-        isInitialMount.current = false;
-      }
-    };
-
     fetchData();
-
-    const interval = setInterval(fetchData, 3000);
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, [isDarkMode]);
+  }, [fetchData]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDarkMode);
@@ -67,6 +61,49 @@ const App: React.FC = () => {
 
   const handleCreateClick = () => setIsFormVisible(true);
   const handleThemeToggle = () => setIsDarkMode((prev) => !prev);
+
+  const selectedContainer = useMemo(
+    () => containers.find((c) => c.id === selectedContId) || null,
+    [containers, selectedContId]
+  );
+
+  const selectedImage = useMemo(
+    () => images.find((i) => i.image_id === selectedImageId) || null,
+    [images, selectedImageId]
+  );
+
+  const renderList = useCallback(() => {
+    const items = activeTab === "containers" ? containers : images;
+    return (
+      <ul className="space-y-2">
+        {items.map((item) => {
+          const id = "id" in item ? item.id : item.image_id;
+          const name =
+            "name" in item
+              ? item.name || id.slice(0, 12)
+              : item.repository || id.slice(0, 12);
+          const isSelected =
+            id ===
+            (activeTab === "containers" ? selectedContId : selectedImageId);
+          return (
+            <li
+              key={id}
+              className={`cursor-pointer p-2 pl-5 rounded-lg ${
+                isSelected ? "bg-accent" : "hover:bg-accent/50"
+              }`}
+              onClick={() =>
+                activeTab === "containers"
+                  ? setSelectedContId(id)
+                  : setSelectedImageId(id)
+              }
+            >
+              {name}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }, [activeTab, containers, images, selectedContId, selectedImageId]);
 
   return (
     <div
@@ -85,41 +122,7 @@ const App: React.FC = () => {
             <TabsTrigger value="images">Images</TabsTrigger>
           </TabsList>
         </Tabs>
-        <ScrollArea className="flex-grow">
-          {activeTab === "containers" ? (
-            <ul className="space-y-2">
-              {containers.map((container) => (
-                <li
-                  key={container.id}
-                  className={`cursor-pointer p-2 pl-5 rounded-lg ${
-                    selectedCont?.id === container.id
-                      ? "bg-accent"
-                      : "hover:bg-accent/50"
-                  }`}
-                  onClick={() => setSelectedCont(container)}
-                >
-                  {container.name || container.id.slice(0, 12)}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ul className="space-y-2">
-              {images.map((image) => (
-                <li
-                  key={image.image_id}
-                  className={`cursor-pointer p-2 pl-5 rounded-lg ${
-                    selectedImage?.image_id === image.image_id
-                      ? "bg-accent"
-                      : "hover:bg-accent/50"
-                  }`}
-                  onClick={() => setSelectedImage(image)}
-                >
-                  {image.repository || image.image_id.slice(0, 12)}
-                </li>
-              ))}
-            </ul>
-          )}
-        </ScrollArea>
+        <ScrollArea className="flex-grow">{renderList()}</ScrollArea>
         <div className="mt-auto pt-4 flex items-center justify-between">
           <button
             className={`absolute bottom-4 left-4 p-2 ${
@@ -136,8 +139,8 @@ const App: React.FC = () => {
         </div>
       </aside>
       <main className="flex-1 p-4 overflow-auto">
-        {activeTab === "containers" && selectedCont && (
-          <ContainerDetails container={selectedCont} />
+        {activeTab === "containers" && selectedContainer && (
+          <ContainerDetails container={selectedContainer} />
         )}
         {activeTab === "images" && selectedImage && (
           <ImageDetails image={selectedImage} />

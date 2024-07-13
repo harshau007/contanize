@@ -473,48 +473,101 @@ type MemoryStats struct {
 func (a *App) GetCPUStats(containerID string) []CPUStats {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		log.Fatalf("error creating Docker client: %v", err)
+		log.Printf("error creating Docker client: %v", err)
+		return []CPUStats{}
+	}
+	defer cli.Close()
+
+	// Check if container exists
+	_, err = cli.ContainerInspect(context.Background(), containerID)
+	if err != nil {
+		if client.IsErrNotFound(err) {
+			log.Printf("Container %s does not exist. Skipping CPU stats collection.", containerID)
+			return []CPUStats{}
+		}
+		log.Printf("error inspecting container: %v", err)
+		return []CPUStats{}
+	}
+
+	// Check container state
+	containerInfo, err := cli.ContainerInspect(context.Background(), containerID)
+	if err != nil {
+		log.Printf("error inspecting container: %v", err)
+		return []CPUStats{}
+	}
+
+	if !containerInfo.State.Running {
+		log.Printf("Container %s is not running. Skipping CPU stats collection.", containerID)
+		return []CPUStats{}
 	}
 
 	stats, err := cli.ContainerStats(context.Background(), containerID, false)
 	if err != nil {
-		log.Fatalf("error getting container stats: %v", err)
+		log.Printf("error getting container stats: %v", err)
+		return []CPUStats{}
 	}
 	defer stats.Body.Close()
 
 	var statsJSON types.StatsJSON
 	if err := json.NewDecoder(stats.Body).Decode(&statsJSON); err != nil {
-		log.Fatalf("error decoding stats JSON: %v", err)
+		log.Printf("error decoding stats JSON: %v", err)
+		return []CPUStats{}
 	}
 
 	cpuDelta := float64(statsJSON.CPUStats.CPUUsage.TotalUsage - statsJSON.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(statsJSON.CPUStats.SystemUsage - statsJSON.PreCPUStats.SystemUsage)
 	cpuUsage := (cpuDelta / systemDelta) * float64(len(statsJSON.CPUStats.CPUUsage.PercpuUsage)) * 100.0
 
-	var cpuStats []CPUStats
-
-	cpuStats = append(cpuStats, CPUStats{
-		Time:  time.Now().Format(time.RFC3339),
-		Usage: fmt.Sprintf("%.2f%%", cpuUsage),
-	})
-	return cpuStats
+	return []CPUStats{
+		{
+			Time:  time.Now().Format(time.RFC3339),
+			Usage: fmt.Sprintf("%.2f%%", cpuUsage),
+		},
+	}
 }
 
 func (a *App) GetMemoryStats(containerID string) []MemoryStats {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		log.Fatalf("error creating Docker client: %v", err)
+		log.Printf("error creating Docker client: %v", err)
+		return []MemoryStats{}
+	}
+	defer cli.Close()
+
+	// Check if container exists
+	_, err = cli.ContainerInspect(context.Background(), containerID)
+	if err != nil {
+		if client.IsErrNotFound(err) {
+			log.Printf("Container %s does not exist. Skipping memory stats collection.", containerID)
+			return []MemoryStats{}
+		}
+		log.Printf("error inspecting container: %v", err)
+		return []MemoryStats{}
+	}
+
+	// Check container state
+	containerInfo, err := cli.ContainerInspect(context.Background(), containerID)
+	if err != nil {
+		log.Printf("error inspecting container: %v", err)
+		return []MemoryStats{}
+	}
+
+	if !containerInfo.State.Running {
+		log.Printf("Container %s is not running. Skipping memory stats collection.", containerID)
+		return []MemoryStats{}
 	}
 
 	stats, err := cli.ContainerStats(context.Background(), containerID, false)
 	if err != nil {
-		log.Fatalf("error getting container stats: %v", err)
+		log.Printf("error getting container stats: %v", err)
+		return []MemoryStats{}
 	}
 	defer stats.Body.Close()
 
 	var statsJSON types.StatsJSON
 	if err := json.NewDecoder(stats.Body).Decode(&statsJSON); err != nil {
-		log.Fatalf("error decoding stats JSON: %v", err)
+		log.Printf("error decoding stats JSON: %v", err)
+		return []MemoryStats{}
 	}
 
 	memoryUsage := statsJSON.MemoryStats.Usage
@@ -525,10 +578,10 @@ func (a *App) GetMemoryStats(containerID string) []MemoryStats {
 		usageString = fmt.Sprintf("%.2f MB", float64(memoryUsage)/(1024*1024))
 	}
 
-	var memoryStats []MemoryStats
-	memoryStats = append(memoryStats, MemoryStats{
-		Time:  time.Now().Format(time.RFC3339),
-		Usage: usageString,
-	})
-	return memoryStats
+	return []MemoryStats{
+		{
+			Time:  time.Now().Format(time.RFC3339),
+			Usage: usageString,
+		},
+	}
 }
