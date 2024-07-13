@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -149,7 +151,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 		}
 
 		containerInfo = append(containerInfo, containerDetail{
-			Id:          containerID,
+			Id:          containerID[:10],
 			Image:       image,
 			ImageId:     imageID,
 			Volume:      volume,
@@ -296,6 +298,8 @@ type imageDetail struct {
 	ImageID    string `json:"image_id"`
 	Created    string `json:"created"`
 	Size       string `json:"size"`
+	Arch       string `json:"arch"`
+	Os         string `json:"os"`
 }
 
 func (a *App) ListImages() []imageDetail {
@@ -323,6 +327,10 @@ func (a *App) ListImages() []imageDetail {
 
 	for _, image := range images {
 		var imageName, tag string
+		imageInspect, _, err := cli.ImageInspectWithRaw(ctx, image.ID)
+		if err != nil {
+			log.Fatal("Error while Inspecting Image in ListImages")
+		}
 		if len(image.RepoDigests) > 0 && len(image.RepoTags) > 0 {
 			imageNameParts := strings.Split(image.RepoDigests[0], "@")
 			imageName = truncateString(imageNameParts[0], repositoryWidth)
@@ -338,6 +346,8 @@ func (a *App) ListImages() []imageDetail {
 		imageID := strings.ReplaceAll(image.ID, "sha256:", "")[0:10]
 		created := truncateString(time.Unix(image.Created, 0).Format("2006-01-02 15:04:05"), createdWidth)
 		size := truncateString(formatSize(image.Size), sizeWidth)
+		arch := imageInspect.Architecture
+		os := imageInspect.Os
 
 		imageDetails = append(imageDetails, imageDetail{
 			Repository: imageName,
@@ -345,6 +355,8 @@ func (a *App) ListImages() []imageDetail {
 			ImageID:    imageID,
 			Created:    created,
 			Size:       size,
+			Arch:       arch,
+			Os:         os,
 		})
 	}
 
@@ -408,4 +420,115 @@ func (a *App) CheckIfImageHasChildren(id string) bool {
 	}
 
 	return false
+}
+
+type LayerInfo struct {
+	ID   string `json:"id"`
+	Size int64  `json:"size"`
+}
+
+func (a *App) GetImageLayerSize(imageName string) ([]LayerInfo, error) {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		fmt.Println("Error connecting to Docker")
+	}
+	imageInspect, _, err := cli.ImageInspectWithRaw(ctx, imageName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch image history
+	imageHistory, err := cli.ImageHistory(ctx, imageInspect.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect non-zero layers
+	var layers []LayerInfo
+	for _, history := range imageHistory {
+		layerSizeMB := history.Size / (1024 * 1024)
+		if layerSizeMB != 0 {
+			layerID := history.ID
+			layers = append(layers, LayerInfo{
+				ID:   layerID,
+				Size: layerSizeMB,
+			})
+		}
+	}
+
+	return layers, nil
+}
+
+type CPUStats struct {
+	Time  string `json:"time"`
+	Usage string `json:"usage"`
+}
+
+type MemoryStats struct {
+	Time  string `json:"time"`
+	Usage string `json:"usage"`
+}
+
+func (a *App) GetCPUStats(containerID string) []CPUStats {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		log.Fatalf("error creating Docker client: %v", err)
+	}
+
+	stats, err := cli.ContainerStats(context.Background(), containerID, false)
+	if err != nil {
+		log.Fatalf("error getting container stats: %v", err)
+	}
+	defer stats.Body.Close()
+
+	var statsJSON types.StatsJSON
+	if err := json.NewDecoder(stats.Body).Decode(&statsJSON); err != nil {
+		log.Fatalf("error decoding stats JSON: %v", err)
+	}
+
+	cpuDelta := float64(statsJSON.CPUStats.CPUUsage.TotalUsage - statsJSON.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(statsJSON.CPUStats.SystemUsage - statsJSON.PreCPUStats.SystemUsage)
+	cpuUsage := (cpuDelta / systemDelta) * float64(len(statsJSON.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+
+	var cpuStats []CPUStats
+
+	cpuStats = append(cpuStats, CPUStats{
+		Time:  time.Now().Format(time.RFC3339),
+		Usage: fmt.Sprintf("%.2f%%", cpuUsage),
+	})
+	return cpuStats
+}
+
+func (a *App) GetMemoryStats(containerID string) []MemoryStats {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		log.Fatalf("error creating Docker client: %v", err)
+	}
+
+	stats, err := cli.ContainerStats(context.Background(), containerID, false)
+	if err != nil {
+		log.Fatalf("error getting container stats: %v", err)
+	}
+	defer stats.Body.Close()
+
+	var statsJSON types.StatsJSON
+	if err := json.NewDecoder(stats.Body).Decode(&statsJSON); err != nil {
+		log.Fatalf("error decoding stats JSON: %v", err)
+	}
+
+	memoryUsage := statsJSON.MemoryStats.Usage
+	var usageString string
+	if memoryUsage > 1024*1024*1024 {
+		usageString = fmt.Sprintf("%.2f GB", float64(memoryUsage)/(1024*1024*1024))
+	} else {
+		usageString = fmt.Sprintf("%.2f MB", float64(memoryUsage)/(1024*1024))
+	}
+
+	var memoryStats []MemoryStats
+	memoryStats = append(memoryStats, MemoryStats{
+		Time:  time.Now().Format(time.RFC3339),
+		Usage: usageString,
+	})
+	return memoryStats
 }

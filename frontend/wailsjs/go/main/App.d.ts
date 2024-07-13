@@ -8,6 +8,12 @@ export function CreateCodeInstance(arg1:string,arg2:string,arg3:string,arg4:stri
 
 export function ForceRemoveContainer(arg1:string):Promise<void>;
 
+export function GetCPUStats(arg1:string):Promise<Array<main.CPUStats>>;
+
+export function GetImageLayerSize(arg1:string):Promise<Array<main.LayerInfo>>;
+
+export function GetMemoryStats(arg1:string):Promise<Array<main.MemoryStats>>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function ListAllContainersJSON():Promise<Array<main.containerDetail>>;

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import React, { useState, useEffect, useRef } from "react";
+import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
-import { Switch } from "./components/ui/switch";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { FiPlus } from "react-icons/fi";
+import { IoSunny, IoMoon } from "react-icons/io5";
 import { ListAllContainersJSON, ListImages } from "../wailsjs/go/main/App";
 import { main } from "../wailsjs/go/models";
 import ContainerDetails from "./components/ContainerDetails";
@@ -26,35 +26,44 @@ const App: React.FC = () => {
   const [containers, setContainers] = useState<main.containerDetail[]>([]);
   const [images, setImages] = useState<main.imageDetail[]>([]);
 
+  const isInitialMount = useRef(true);
+
   const handleContainer = async () => {
     const containerData = await ListAllContainersJSON();
     setContainers(containerData || []);
-    if (containerData.length > 0 && !selectedCont) {
-      setSelectedCont(containerData[0]);
-    }
   };
 
   const handleImages = async () => {
     const imageData = await ListImages();
     setImages(imageData || []);
-    if (imageData && imageData.length > 0 && !selectedImage) {
-      setSelectedImage(imageData[0]);
-    }
   };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await handleContainer();
+      await handleImages();
+
+      if (isInitialMount.current) {
+        if (containers.length > 0 && !selectedCont) {
+          setSelectedCont(containers[0]);
+        }
+        if (images.length > 0 && !selectedImage) {
+          setSelectedImage(images[0]);
+        }
+        isInitialMount.current = false;
+      }
+    };
+
+    fetchData();
+
+    const interval = setInterval(fetchData, 3000);
+    return () => clearInterval(interval);
+  }, [isDarkMode]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDarkMode);
     localStorage.setItem("theme", isDarkMode ? "dark" : "light");
-    handleContainer();
-    handleImages();
-    const interval = setInterval(() => {
-      handleContainer();
-      handleImages();
-    }, 3000);
-    return () => clearInterval(interval);
   }, [isDarkMode]);
-
-  useEffect(() => {}, [activeTab]);
 
   const handleCreateClick = () => setIsFormVisible(true);
   const handleThemeToggle = () => setIsDarkMode((prev) => !prev);
@@ -62,7 +71,7 @@ const App: React.FC = () => {
   return (
     <div
       className={`flex h-screen select-none ${
-        isDarkMode ? "dark" : ""
+        isDarkMode ? "bg-deep-dark" : ""
       } bg-background text-foreground`}
     >
       <aside className="w-64 border-r border-border p-4 flex flex-col">
@@ -112,8 +121,18 @@ const App: React.FC = () => {
           )}
         </ScrollArea>
         <div className="mt-auto pt-4 flex items-center justify-between">
-          <span>Dark Mode</span>
-          <Switch checked={isDarkMode} onCheckedChange={handleThemeToggle} />
+          <button
+            className={`absolute bottom-4 left-4 p-2 ${
+              isDarkMode ? "bg-deep-dark" : "bg-light-white"
+            } rounded-full focus:outline-none`}
+            onClick={handleThemeToggle}
+          >
+            {isDarkMode ? (
+              <IoSunny className="text-yellow-500" />
+            ) : (
+              <IoMoon className="text-deep-dark" />
+            )}
+          </button>
         </div>
       </aside>
       <main className="flex-1 p-4 overflow-auto">

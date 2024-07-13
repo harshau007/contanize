@@ -28,7 +28,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
   };
 
   return (
-    <Card className="fixed inset-0 flex items-center justify-center bg-background/80">
+    <Card className="fixed inset-0 flex items-center justify-center bg-deep-dark/80">
       <CardContent className="bg-card p-6 rounded-lg shadow-lg w-96">
         <CardHeader>
           <CardTitle>Create New Container</CardTitle>

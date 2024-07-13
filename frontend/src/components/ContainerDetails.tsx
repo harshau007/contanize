@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { FiPlay, FiStopCircle, FiTrash2, FiExternalLink } from "react-icons/fi";
@@ -12,41 +12,64 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { main } from "../../wailsjs/go/models";
-import { URL, StartContainer, StopContainer } from "../../wailsjs/go/main/App";
+import {
+  URL,
+  StartContainer,
+  StopContainer,
+  GetCPUStats,
+  GetMemoryStats,
+} from "../../wailsjs/go/main/App";
 import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
   Tooltip as ShadTooltip,
 } from "./ui/tooltip";
-
+import { GenericLineChart } from "./ui/charts/GenericLineChart";
+const MAX_DATA_POINTS = 15;
 interface ContainerDetailsProps {
   container: main.containerDetail;
 }
 
 const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
-  // Dummy data for the container
-  const containerInfo = {
-    id: container.id,
-    name: "Sample Container",
-    image: "nginx:latest",
-    status: "Running",
-    created: "2023-07-01 10:00:00",
-    ports: "80/tcp, 443/tcp",
+  const [cpuUsage, setCpuUsage] = useState<main.CPUStats[]>([]);
+  const [memUsage, setMemUsage] = useState<main.MemoryStats[]>([]);
+
+  const handleCpuUsage = async () => {
+    const cpuStats = await GetCPUStats(container.id);
+    setCpuUsage((prevStats) =>
+      [...prevStats, ...cpuStats].slice(-MAX_DATA_POINTS)
+    );
   };
 
-  // Dummy data for the CPU usage chart
-  const cpuData = Array.from({ length: 24 }, (_, i) => ({
-    time: `${i}:00`,
-    usage: Math.random() * 100,
+  const handleMemUsage = async () => {
+    const memStats = await GetMemoryStats(container.id);
+    setMemUsage((prevStats) =>
+      [...prevStats, ...memStats].slice(-MAX_DATA_POINTS)
+    );
+  };
+
+  useEffect(() => {
+    handleCpuUsage();
+    handleMemUsage();
+
+    const interval = setInterval(() => {
+      handleCpuUsage();
+      handleMemUsage();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [container.id]);
+
+  const parsedCpuUsage = cpuUsage.map((stat) => ({
+    ...stat,
+    usage: parseFloat(stat.usage),
   }));
 
-  // Dummy data for the memory usage chart
-  const memoryData = Array.from({ length: 24 }, (_, i) => ({
-    time: `${i}:00`,
-    usage: Math.floor(Math.random() * 1024),
+  const parsedMemUsage = memUsage.map((stat) => ({
+    ...stat,
+    usage: parseFloat(stat.usage),
   }));
-
   return (
     <div className="space-y-4">
       <Card>
@@ -57,7 +80,7 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
               <TooltipProvider>
                 <ShadTooltip>
                   <TooltipTrigger>
-                    <Button variant="outline" size="icon" className="mr-2">
+                    <Button variant="outline" size="icon" className="mr-2 ">
                       {container.status.slice(0, 6) !== "Exited" ? (
                         <FiStopCircle
                           onClick={async () => {
@@ -85,7 +108,13 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
                       onClick={async () => {
                         await URL(container.url);
                       }}
-                      className="mr-2"
+                      className={`mr-2 ${
+                        container.url &&
+                        container.status.slice(0, 6) !== "Exited"
+                          ? ""
+                          : "disabled:opacity-50 disabled:pointer-events-none"
+                      }`}
+                      disabled={container.status.slice(0, 6) === "Exited"}
                     >
                       <FiExternalLink />
                     </Button>
@@ -123,44 +152,28 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
           </p>
           <p>
             <strong>Ports:</strong>{" "}
-            {container.public_ports ? container.public_ports.join(", ") : ""}
+            {container.public_ports
+              ? container.public_ports.join(", ")
+              : "<none>"}
           </p>
         </CardContent>
       </Card>
+      <GenericLineChart
+        data={parsedCpuUsage}
+        dataKey="usage"
+        title="CPU Usage"
+        color="hsl(var(--chart-1))"
+        yAxisDomain={[0, 100]}
+        tooltipFormatter={(value) => `${value.toFixed(2)}%`}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>CPU Usage</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={cpuData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="usage" stroke="#8884d8" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Memory Usage</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={memoryData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="usage" stroke="#82ca9d" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <GenericLineChart
+        data={parsedMemUsage}
+        dataKey="usage"
+        title="Memory Usage"
+        color="hsl(var(--chart-2))"
+        tooltipFormatter={(value) => `${value.toFixed(2)} MB`}
+      />
     </div>
   );
 };

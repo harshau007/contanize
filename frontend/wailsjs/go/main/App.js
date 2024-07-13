@@ -14,6 +14,18 @@ export function ForceRemoveContainer(arg1) {
   return window['go']['main']['App']['ForceRemoveContainer'](arg1);
 }
 
+export function GetCPUStats(arg1) {
+  return window['go']['main']['App']['GetCPUStats'](arg1);
+}
+
+export function GetImageLayerSize(arg1) {
+  return window['go']['main']['App']['GetImageLayerSize'](arg1);
+}
+
+export function GetMemoryStats(arg1) {
+  return window['go']['main']['App']['GetMemoryStats'](arg1);
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }

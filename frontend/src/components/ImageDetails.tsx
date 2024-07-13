@@ -1,41 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { FiTrash2 } from "react-icons/fi";
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis } from "recharts";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import { main } from "wailsjs/go/models";
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { main } from "../../wailsjs/go/models";
+import { GetImageLayerSize } from "../../wailsjs/go/main/App";
 
 interface ImageDetailsProps {
   image: main.imageDetail;
 }
 
+const chartConfig = {
+  desktop: {
+    label: "Size",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig;
+
 const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
-  // Dummy data for the image
-  const imageInfo = {
-    id: image.image_id,
-    repository: "nginx",
-    tag: "latest",
-    created: "2023-06-15 14:30:00",
-    size: "142 MB",
-    architecture: "amd64",
-    os: "linux",
+  const [imageLayerInfo, setImageLayerInfo] = useState<main.LayerInfo[]>();
+
+  const handleImagerLayer = async () => {
+    const layerResp = await GetImageLayerSize(image.repository);
+    layerResp.forEach((layer, index) => {
+      if (layer.id === "<missing>") {
+        layer.id = `Layer ${index + 1}`;
+      }
+    });
+    setImageLayerInfo(layerResp);
   };
 
-  // Dummy data for the layer sizes chart
-  const layerData = [
-    { name: "Layer 1", size: 25 },
-    { name: "Layer 2", size: 40 },
-    { name: "Layer 3", size: 30 },
-    { name: "Layer 4", size: 47 },
-  ];
+  useEffect(() => {
+    handleImagerLayer();
+    const interval = setInterval(() => {
+      handleImagerLayer();
+    }, 3000);
+    return () => clearInterval(interval);
+  });
 
   return (
     <div className="space-y-4">
@@ -61,10 +68,10 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
             <strong>Size:</strong> {image.size}
           </p>
           <p>
-            <strong>Architecture:</strong> {imageInfo.architecture}
+            <strong>Architecture:</strong> {image.arch}
           </p>
           <p>
-            <strong>OS:</strong> {imageInfo.os}
+            <strong>OS:</strong> {image.os}
           </p>
         </CardContent>
       </Card>
@@ -74,15 +81,36 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
           <CardTitle>Layer Sizes</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={layerData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="size" fill="#8884d8" />
+          <ChartContainer config={chartConfig}>
+            <BarChart
+              accessibilityLayer
+              data={imageLayerInfo}
+              margin={{
+                top: 20,
+              }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="id"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel />}
+                formatter={(value) => `Size: ${value} MiB`}
+              />
+              <Bar dataKey="size" fill="var(--color-desktop)" radius={8}>
+                <LabelList
+                  position="top"
+                  offset={12}
+                  className="fill-foreground"
+                  fontSize={12}
+                />
+              </Bar>
             </BarChart>
-          </ResponsiveContainer>
+          </ChartContainer>
         </CardContent>
       </Card>
     </div>
