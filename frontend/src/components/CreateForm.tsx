@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,14 +13,23 @@ import {
 import { CreateCodeInstance, SelectFolder } from "../../wailsjs/go/main/App";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { IoFolderOpenOutline } from "react-icons/io5";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface CreateFormProps {
+  open: boolean;
   onClose: () => void;
   isCreating: boolean;
   setIsCreating: (isCreating: boolean) => void;
 }
 
 const CreateForm: React.FC<CreateFormProps> = ({
+  open,
   onClose,
   isCreating,
   setIsCreating,
@@ -47,8 +55,6 @@ const CreateForm: React.FC<CreateFormProps> = ({
     "Java21",
   ];
 
-  const templateChoices = ["Next-js", "Next-ts", "Nest"];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     onClose();
@@ -72,15 +78,16 @@ const CreateForm: React.FC<CreateFormProps> = ({
   };
 
   return (
-    <Card className="fixed inset-0 flex items-center justify-center bg-deep-dark/60 border-deep-dark/80">
-      <CardContent className="bg-card p-6 rounded-lg shadow-lg w-96">
-        <CardHeader>
-          <CardTitle>Create New Container</CardTitle>
-        </CardHeader>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Container</DialogTitle>
+        </DialogHeader>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex items-center justify-center">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="package">Package</TabsTrigger>
             <TabsTrigger value="template">Template</TabsTrigger>
+            {/* <TabsTrigger value="db">Databse</TabsTrigger> */}
           </TabsList>
           <TabsContent value="package">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -115,12 +122,6 @@ const CreateForm: React.FC<CreateFormProps> = ({
                 value={port}
                 onChange={(e) => setPort(e.target.value)}
               />
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button type="submit">Create</Button>
-              </div>
             </form>
           </TabsContent>
           <TabsContent value="template">
@@ -135,11 +136,6 @@ const CreateForm: React.FC<CreateFormProps> = ({
                   <SelectValue placeholder="Select Template" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* {templateChoices.map((choice, index) => (
-                    <SelectItem value={choice.toLowerCase()} key={index}>
-                      {choice}
-                    </SelectItem>
-                  ))} */}
                   <SelectGroup>
                     <SelectLabel>Node</SelectLabel>
                     <SelectItem value="next-js">Next-js</SelectItem>
@@ -168,17 +164,17 @@ const CreateForm: React.FC<CreateFormProps> = ({
                 value={port}
                 onChange={(e) => setPort(e.target.value)}
               />
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button type="submit">Create</Button>
-              </div>
             </form>
           </TabsContent>
         </Tabs>
-      </CardContent>
-    </Card>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>Create</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

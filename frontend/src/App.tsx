@@ -16,13 +16,13 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("containers");
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [selectedContId, setSelectedContId] = useState<string | null>(null);
-  const [isFormVisible, setIsFormVisible] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(
     () => localStorage.getItem("theme") === "dark"
   );
   const [containers, setContainers] = useState<main.containerDetail[]>([]);
   const [images, setImages] = useState<main.imageDetail[]>([]);
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -61,8 +61,9 @@ const App: React.FC = () => {
     localStorage.setItem("theme", isDarkMode ? "dark" : "light");
   }, [isDarkMode]);
 
-  const handleCreateClick = () => setIsFormVisible(true);
   const handleThemeToggle = () => setIsDarkMode((prev) => !prev);
+  const handleCreateClick = () => setIsFormOpen(true);
+  const handleCloseForm = () => setIsFormOpen(false);
 
   const selectedContainer = useMemo(
     () => containers.find((c) => c.id === selectedContId) || null,
@@ -153,9 +154,10 @@ const App: React.FC = () => {
           <ImageDetails image={selectedImage} />
         )}
       </main>
-      {isFormVisible && (
+      {isFormOpen && (
         <CreateForm
-          onClose={() => setIsFormVisible(false)}
+          open={isFormOpen}
+          onClose={handleCloseForm}
           isCreating={isCreating}
           setIsCreating={setIsCreating}
         />

@@ -21,6 +21,14 @@ import {
   ListAllContainersJSON,
   RemoveImages,
 } from "../../wailsjs/go/main/App";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 
 interface ImageDetailsProps {
   image: main.imageDetail;
@@ -36,6 +44,7 @@ const chartConfig = {
 const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
   const [imageLayerInfo, setImageLayerInfo] = useState<main.LayerInfo[]>();
   const [usedImages, setUsedImages] = useState<string[]>([]);
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
 
   const handleImagerLayer = async () => {
     const layerResp = await GetImageLayerSize(image.repository);
@@ -47,8 +56,13 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
     setImageLayerInfo(layerResp);
   };
 
-  const handleDelete = async (id: string) => {
-    await RemoveImages(id, true, true);
+  const handleDelete = async () => {
+    await RemoveImages(image.image_id, true, true);
+    setIsRemoveDialogOpen(false);
+  };
+
+  const openRemoveDialog = () => {
+    setIsRemoveDialogOpen(true);
   };
 
   useEffect(() => {
@@ -94,9 +108,7 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
                         ? "opacity-50 pointer-events-none"
                         : ""
                     }`}
-                    onClick={() => {
-                      handleDelete(image.image_id);
-                    }}
+                    onClick={openRemoveDialog}
                   >
                     <FiTrash2 />
                   </Button>
@@ -164,6 +176,29 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
           </ChartContainer>
         </CardContent>
       </Card>
+
+      <Dialog open={isRemoveDialogOpen} onOpenChange={setIsRemoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Image Removal</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this image? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRemoveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
