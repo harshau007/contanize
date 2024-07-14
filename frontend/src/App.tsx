@@ -10,6 +10,7 @@ import ContainerDetails from "./components/ContainerDetails";
 import ImageDetails from "./components/ImageDetails";
 import CreateForm from "./components/CreateForm";
 import "./globals.css";
+import Loading from "./components/Loading";
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState("containers");
@@ -21,6 +22,7 @@ const App: React.FC = () => {
   );
   const [containers, setContainers] = useState<main.containerDetail[]>([]);
   const [images, setImages] = useState<main.imageDetail[]>([]);
+  const [isCreating, setIsCreating] = useState<boolean>(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -76,6 +78,11 @@ const App: React.FC = () => {
     const items = activeTab === "containers" ? containers : images;
     return (
       <ul className="space-y-2">
+        {isCreating && activeTab === "containers" && (
+          <li className="mb-2">
+            <Loading isCreating={isCreating} />
+          </li>
+        )}
         {items.map((item) => {
           const id = "id" in item ? item.id : item.image_id;
           const name =
@@ -146,7 +153,13 @@ const App: React.FC = () => {
           <ImageDetails image={selectedImage} />
         )}
       </main>
-      {isFormVisible && <CreateForm onClose={() => setIsFormVisible(false)} />}
+      {isFormVisible && (
+        <CreateForm
+          onClose={() => setIsFormVisible(false)}
+          isCreating={isCreating}
+          setIsCreating={setIsCreating}
+        />
+      )}
     </div>
   );
 };

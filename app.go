@@ -398,30 +398,6 @@ func (a *App) RemoveImages(id string, force bool, prune bool) {
 	fmt.Println(images[1].Deleted)
 }
 
-func (a *App) CheckIfImageHasChildren(id string) bool {
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return false
-	}
-
-	// List all images
-	filters := filters.NewArgs(filters.Arg("label", "createdBy=DevBox"))
-	images, err := cli.ImageList(ctx, imagetype.ListOptions{All: true, Filters: filters})
-	if err != nil {
-		return false
-	}
-
-	// Check for child images
-	for _, image := range images {
-		if image.ParentID == id {
-			return true
-		}
-	}
-
-	return false
-}
-
 type LayerInfo struct {
 	ID   string `json:"id"`
 	Size int64  `json:"size"`
@@ -438,13 +414,13 @@ func (a *App) GetImageLayerSize(imageName string) ([]LayerInfo, error) {
 		return nil, err
 	}
 
-	// Fetch image history
+	// Fetching image history
 	imageHistory, err := cli.ImageHistory(ctx, imageInspect.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Collect non-zero layers
+	// Collecting non-zero layers
 	var layers []LayerInfo
 	for _, history := range imageHistory {
 		layerSizeMB := history.Size / (1024 * 1024)
@@ -478,18 +454,18 @@ func (a *App) GetCPUStats(containerID string) []CPUStats {
 	}
 	defer cli.Close()
 
-	// Check if container exists
+	// If Container exists
 	_, err = cli.ContainerInspect(context.Background(), containerID)
 	if err != nil {
 		if client.IsErrNotFound(err) {
-			log.Printf("Container %s does not exist. Skipping CPU stats collection.", containerID)
+			// log.Printf("Container %s does not exist. Skipping CPU stats collection.", containerID)
 			return []CPUStats{}
 		}
 		log.Printf("error inspecting container: %v", err)
 		return []CPUStats{}
 	}
 
-	// Check container state
+	// Container state
 	containerInfo, err := cli.ContainerInspect(context.Background(), containerID)
 	if err != nil {
 		log.Printf("error inspecting container: %v", err)
@@ -497,7 +473,7 @@ func (a *App) GetCPUStats(containerID string) []CPUStats {
 	}
 
 	if !containerInfo.State.Running {
-		log.Printf("Container %s is not running. Skipping CPU stats collection.", containerID)
+		// log.Printf("Container %s is not running. Skipping CPU stats collection.", containerID)
 		return []CPUStats{}
 	}
 
@@ -534,18 +510,18 @@ func (a *App) GetMemoryStats(containerID string) []MemoryStats {
 	}
 	defer cli.Close()
 
-	// Check if container exists
+	// If Container exists
 	_, err = cli.ContainerInspect(context.Background(), containerID)
 	if err != nil {
 		if client.IsErrNotFound(err) {
-			log.Printf("Container %s does not exist. Skipping memory stats collection.", containerID)
+			// log.Printf("Container %s does not exist. Skipping memory stats collection.", containerID)
 			return []MemoryStats{}
 		}
 		log.Printf("error inspecting container: %v", err)
 		return []MemoryStats{}
 	}
 
-	// Check container state
+	// Container state
 	containerInfo, err := cli.ContainerInspect(context.Background(), containerID)
 	if err != nil {
 		log.Printf("error inspecting container: %v", err)
@@ -553,7 +529,7 @@ func (a *App) GetMemoryStats(containerID string) []MemoryStats {
 	}
 
 	if !containerInfo.State.Running {
-		log.Printf("Container %s is not running. Skipping memory stats collection.", containerID)
+		// log.Printf("Container %s is not running. Skipping memory stats collection.", containerID)
 		return []MemoryStats{}
 	}
 

@@ -15,9 +15,15 @@ import { IoFolderOpenOutline } from "react-icons/io5";
 
 interface CreateFormProps {
   onClose: () => void;
+  isCreating: boolean;
+  setIsCreating: (isCreating: boolean) => void;
 }
 
-const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
+const CreateForm: React.FC<CreateFormProps> = ({
+  onClose,
+  isCreating,
+  setIsCreating,
+}) => {
   const [activeTab, setActiveTab] = useState("package");
   const [containerName, setContainerName] = useState("");
   const [technology, setTechnology] = useState("");
@@ -43,12 +49,14 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    onClose();
+    setIsCreating(true);
     if (activeTab === "package") {
       await CreateCodeInstance(containerName, technology, folder, port, "");
     } else {
       await CreateCodeInstance(containerName, "none", folder, port, template);
     }
-    onClose();
+    setIsCreating(false);
   };
 
   const handleSelectFolder = async (e: React.MouseEvent<HTMLButtonElement>) => {
