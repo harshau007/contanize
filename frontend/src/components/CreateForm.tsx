@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
@@ -133,11 +135,23 @@ const CreateForm: React.FC<CreateFormProps> = ({
                   <SelectValue placeholder="Select Template" />
                 </SelectTrigger>
                 <SelectContent>
-                  {templateChoices.map((choice, index) => (
+                  {/* {templateChoices.map((choice, index) => (
                     <SelectItem value={choice.toLowerCase()} key={index}>
                       {choice}
                     </SelectItem>
-                  ))}
+                  ))} */}
+                  <SelectGroup>
+                    <SelectLabel>Node</SelectLabel>
+                    <SelectItem value="next-js">Next-js</SelectItem>
+                    <SelectItem value="next-ts">Next-ts</SelectItem>
+                    <SelectItem value="nest">Nest</SelectItem>
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Go</SelectLabel>
+                    <SelectItem value="goftt">
+                      Go + Fiber + Templ + Tailwind
+                    </SelectItem>
+                  </SelectGroup>
                 </SelectContent>
               </Select>
               <div className="relative">

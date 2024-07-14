@@ -28,6 +28,16 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 const MAX_DATA_POINTS = 15;
 
@@ -40,6 +50,7 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
   const [memUsage, setMemUsage] = useState<main.MemoryStats[]>([]);
   const [isPortDialogOpen, setIsPortDialogOpen] = useState(false);
   const [additionalPort, setAdditionalPort] = useState("");
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
 
   const handleCpuUsage = async () => {
     const cpuStats = await GetCPUStats(container.id);
@@ -57,7 +68,16 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
 
   const handleDelete = async (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    await RemoveContainer(id, false);
+    if (container.status.slice(0, 6) !== "Exited") {
+      setIsRemoveDialogOpen(true);
+    } else {
+      await RemoveContainer(id, false);
+    }
+  };
+
+  const handleForceRemove = async () => {
+    await RemoveContainer(container.id, true);
+    setIsRemoveDialogOpen(false);
   };
 
   const handleStartContainer = async () => {
@@ -223,6 +243,27 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
           tooltipFormatter={(value) => `${value.toFixed(2)} MiB`}
         />
       </div>
+
+      <AlertDialog
+        open={isRemoveDialogOpen}
+        onOpenChange={setIsRemoveDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Container Removal</AlertDialogTitle>
+            <AlertDialogDescription>
+              This container is currently running. Are you sure you want to
+              force remove it? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleForceRemove}>
+              Force Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isPortDialogOpen} onOpenChange={setIsPortDialogOpen}>
         <DialogContent>

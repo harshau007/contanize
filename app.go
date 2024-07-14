@@ -214,6 +214,12 @@ func (a *App) CreateCodeInstance(name string, packageName string, folder string,
 		if err != nil {
 			fmt.Printf("error executing the script: %s", err)
 		}
+	} else if strings.Contains(template, "goftt") {
+		cmd := exec.Command("portdevctl", strings.ToLower(name), "go", folder, ports, template)
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("error executing the script: %s", err)
+		}
 	} else {
 		cmd := exec.Command("portdevctl", strings.ToLower(name), packageName, folder, ports, "none")
 		output, err = cmd.CombinedOutput()
