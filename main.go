@@ -26,10 +26,10 @@ func main() {
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:             "DevBox Desktop",
-		Width:             1024,
-		Height:            768,
-		MinWidth:          1024,
-		MinHeight:         768,
+		Width:             1200,
+		Height:            900,
+		MinWidth:          1200,
+		MinHeight:         900,
 		MaxWidth:          1920,
 		MaxHeight:         1080,
 		DisableResize:     false,

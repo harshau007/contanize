@@ -4,9 +4,13 @@ import {main} from '../models';
 
 export function CreateCodeInstance(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
 
+export function CreateDB(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
+
 export function ForceRemoveContainer(arg1:string):Promise<void>;
 
 export function GetCPUStats(arg1:string):Promise<Array<main.CPUStats>>;
+
+export function GetContainerMetrics(arg1:string):Promise<main.ContainerMetrics>;
 
 export function GetImageLayerSize(arg1:string):Promise<Array<main.LayerInfo>>;
 

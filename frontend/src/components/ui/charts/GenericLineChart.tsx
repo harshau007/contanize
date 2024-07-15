@@ -16,7 +16,7 @@ interface GenericLineChartProps {
   dataKey: string;
   title: string;
   color: string;
-  status: string; // New prop for container status
+  status: string;
   yAxisDomain?: [number, number];
   tooltipFormatter?: (value: number) => string;
 }
@@ -38,10 +38,7 @@ export function GenericLineChart({
   } satisfies ChartConfig;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
+    <Card className="p-5">
       <CardContent>
         {status === "Exited" ? (
           <div className="flex justify-center items-center h-72 text-gray-500">

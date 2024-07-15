@@ -14,6 +14,28 @@ export namespace main {
 	        this.usage = source["usage"];
 	    }
 	}
+	export class ContainerMetrics {
+	    cpuUsage: string;
+	    memoryUsage: string;
+	    networkInput: string;
+	    networkOutput: string;
+	    diskIO: string;
+	    runningProcesses: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContainerMetrics(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cpuUsage = source["cpuUsage"];
+	        this.memoryUsage = source["memoryUsage"];
+	        this.networkInput = source["networkInput"];
+	        this.networkOutput = source["networkOutput"];
+	        this.diskIO = source["diskIO"];
+	        this.runningProcesses = source["runningProcesses"];
+	    }
+	}
 	export class LayerInfo {
 	    id: string;
 	    size: number;

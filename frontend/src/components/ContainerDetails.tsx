@@ -10,6 +10,7 @@ import {
   GetCPUStats,
   GetMemoryStats,
   RemoveContainer,
+  GetContainerMetrics,
 } from "../../wailsjs/go/main/App";
 import {
   TooltipContent,
@@ -38,6 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import { RadarChart } from "./ui/charts/RadarChart";
 
 const MAX_DATA_POINTS = 15;
 
@@ -51,6 +53,9 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
   const [isPortDialogOpen, setIsPortDialogOpen] = useState(false);
   const [additionalPort, setAdditionalPort] = useState("");
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [radarData, setRadarData] = useState<main.ContainerMetrics | null>(
+    null
+  );
 
   const handleCpuUsage = async () => {
     const cpuStats = await GetCPUStats(container.id);
@@ -64,6 +69,11 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
     setMemUsage((prevStats) =>
       [...prevStats, ...memStats].slice(-MAX_DATA_POINTS)
     );
+  };
+
+  const handleRadarData = async () => {
+    const metrics = await GetContainerMetrics(container.id);
+    setRadarData(metrics);
   };
 
   const handleDelete = async (id: string, event: React.MouseEvent) => {
@@ -108,11 +118,13 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
   useEffect(() => {
     handleCpuUsage();
     handleMemUsage();
+    handleRadarData();
 
     const interval = setInterval(() => {
       handleCpuUsage();
       handleMemUsage();
-    }, 3000);
+      handleRadarData();
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [container.id]);
@@ -223,25 +235,75 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
         </CardContent>
       </Card>
 
-      <GenericLineChart
-        data={parsedCpuUsage}
-        dataKey="usage"
-        title="CPU Usage"
-        color="hsl(var(--chart-1))"
-        status={container.status.slice(0, 6)}
-        yAxisDomain={[0, 100]}
-        tooltipFormatter={(value) => `${value.toFixed(2)}%`}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>CPU Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GenericLineChart
+                data={parsedCpuUsage}
+                dataKey="usage"
+                title="CPU Usage"
+                color="hsl(var(--chart-1))"
+                status={container.status.slice(0, 6)}
+                yAxisDomain={[0, 100]}
+                tooltipFormatter={(value) => `${value.toFixed(2)}%`}
+              />
+            </CardContent>
+          </Card>
 
-      <div className="w-[100%] h-[75%]">
-        <GenericLineChart
-          data={parsedMemUsage}
-          dataKey="usage"
-          title="Memory Usage"
-          color="hsl(var(--chart-2))"
-          status={container.status.slice(0, 6)}
-          tooltipFormatter={(value) => `${value.toFixed(2)} MiB`}
-        />
+          <Card>
+            <CardHeader>
+              <CardTitle>Memory Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <GenericLineChart
+                data={parsedMemUsage}
+                dataKey="usage"
+                title="Memory Usage"
+                color="hsl(var(--chart-2))"
+                status={container.status.slice(0, 6)}
+                tooltipFormatter={(value) => `${value.toFixed(2)} MiB`}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex items-center justify-center">
+          {radarData && (
+            <RadarChart
+              data={[
+                {
+                  metric: "CPU Usage (%)",
+                  value: parseFloat(radarData.cpuUsage),
+                },
+                {
+                  metric: "Memory Usage (%)",
+                  value: parseFloat(radarData.memoryUsage),
+                },
+                {
+                  metric: "Network In (MB/s)",
+                  value: parseFloat(radarData.networkInput),
+                },
+                {
+                  metric: "Network Out (MB/s)",
+                  value: parseFloat(radarData.networkOutput),
+                },
+                {
+                  metric: "Disk I/O (MB/s)",
+                  value: parseFloat(radarData.diskIO),
+                },
+                {
+                  metric: "Running Processes",
+                  value: parseFloat(radarData.runningProcesses),
+                },
+              ]}
+              status={container.status.slice(0, 6)}
+            />
+          )}
+        </div>
       </div>
 
       <AlertDialog

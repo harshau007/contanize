@@ -6,12 +6,20 @@ export function CreateCodeInstance(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['CreateCodeInstance'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function CreateDB(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['CreateDB'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function ForceRemoveContainer(arg1) {
   return window['go']['main']['App']['ForceRemoveContainer'](arg1);
 }
 
 export function GetCPUStats(arg1) {
   return window['go']['main']['App']['GetCPUStats'](arg1);
+}
+
+export function GetContainerMetrics(arg1) {
+  return window['go']['main']['App']['GetContainerMetrics'](arg1);
 }
 
 export function GetImageLayerSize(arg1) {

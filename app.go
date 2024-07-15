@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"devcontrolGUI/services"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -565,5 +567,83 @@ func (a *App) GetMemoryStats(containerID string) []MemoryStats {
 			Time:  time.Now().Format(time.RFC3339),
 			Usage: usageString,
 		},
+	}
+}
+
+type ContainerMetrics struct {
+	CPUUsage         string `json:"cpuUsage"`
+	MemoryUsage      string `json:"memoryUsage"`
+	NetworkInput     string `json:"networkInput"`
+	NetworkOutput    string `json:"networkOutput"`
+	DiskIO           string `json:"diskIO"`
+	RunningProcesses string `json:"runningProcesses"`
+}
+
+func (a *App) GetContainerMetrics(containerID string) (ContainerMetrics, error) {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return ContainerMetrics{}, fmt.Errorf("error creating Docker client: %v", err)
+	}
+	defer cli.Close()
+
+	stats, err := cli.ContainerStats(ctx, containerID, false)
+	if err != nil {
+		return ContainerMetrics{}, fmt.Errorf("error getting container stats: %v", err)
+	}
+	defer stats.Body.Close()
+
+	var statsJSON types.StatsJSON
+	if err := json.NewDecoder(stats.Body).Decode(&statsJSON); err != nil {
+		return ContainerMetrics{}, fmt.Errorf("error decoding stats JSON: %v", err)
+	}
+
+	// Calculate CPU usage percentage
+	cpuDelta := float64(statsJSON.CPUStats.CPUUsage.TotalUsage - statsJSON.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(statsJSON.CPUStats.SystemUsage - statsJSON.PreCPUStats.SystemUsage)
+	cpuUsage := (cpuDelta / systemDelta) * float64(len(statsJSON.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+
+	// Calculate memory usage in percentage
+	memoryUsage := float64(statsJSON.MemoryStats.Usage) / float64(statsJSON.MemoryStats.Limit) * 100.0
+
+	// Calculate network I/O in MB/s
+	networkInput := float64(statsJSON.Networks["eth0"].RxBytes) / (1024 * 1024)
+	networkOutput := float64(statsJSON.Networks["eth0"].TxBytes) / (1024 * 1024)
+
+	// Calculate disk I/O in MB/s
+	var readIO, writeIO uint64
+	for _, blkio := range statsJSON.BlkioStats.IoServiceBytesRecursive {
+		if blkio.Op == "Read" {
+			readIO += blkio.Value
+		}
+		if blkio.Op == "Write" {
+			writeIO += blkio.Value
+		}
+	}
+	diskIO := float64(readIO+writeIO) / (1024 * 1024)
+
+	// Get number of running processes
+	runningProcesses := statsJSON.PidsStats.Current
+
+	return ContainerMetrics{
+		CPUUsage:         fmt.Sprintf("%.2f", math.Min(cpuUsage, 100)),
+		MemoryUsage:      fmt.Sprintf("%.2f", math.Min(memoryUsage, 100)),
+		NetworkInput:     fmt.Sprintf("%.2f", networkInput),
+		NetworkOutput:    fmt.Sprintf("%.2f", networkOutput),
+		DiskIO:           fmt.Sprintf("%.2f", diskIO),
+		RunningProcesses: fmt.Sprintf("%d", runningProcesses),
+	}, nil
+}
+
+func (a *App) CreateDB(dbtype, username, password, dbname, contname string) string {
+	switch dbtype {
+	case "postgres":
+		id, err := services.RunPostgresContainer(username, password, dbname, contname)
+		if err != nil {
+			log.Fatal("Error occured while creating Postgres Instance", err)
+		}
+		return id
+	default:
+		return "No Container Created"
 	}
 }
