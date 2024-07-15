@@ -24,7 +24,6 @@ interface GenericLineChartProps {
 export function GenericLineChart({
   data,
   dataKey,
-  title,
   color,
   status,
   yAxisDomain,
@@ -38,10 +37,10 @@ export function GenericLineChart({
   } satisfies ChartConfig;
 
   return (
-    <Card className="p-5">
+    <Card className="pt-5">
       <CardContent>
         {status === "Exited" ? (
-          <div className="flex justify-center items-center h-72 text-gray-500">
+          <div className="flex justify-center items-center text-gray-500">
             Inactive Container
           </div>
         ) : (

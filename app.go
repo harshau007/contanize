@@ -505,7 +505,7 @@ func (a *App) GetCPUStats(containerID string) []CPUStats {
 	return []CPUStats{
 		{
 			Time:  time.Now().Format(time.RFC3339),
-			Usage: fmt.Sprintf("%.2f%%", cpuUsage),
+			Usage: fmt.Sprintf("%.5f%%", cpuUsage),
 		},
 	}
 }

@@ -53,9 +53,7 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
   const [isPortDialogOpen, setIsPortDialogOpen] = useState(false);
   const [additionalPort, setAdditionalPort] = useState("");
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
-  const [radarData, setRadarData] = useState<main.ContainerMetrics | null>(
-    null
-  );
+  const [radarData, setRadarData] = useState<main.ContainerMetrics>();
 
   const handleCpuUsage = async () => {
     const cpuStats = await GetCPUStats(container.id);
@@ -73,7 +71,20 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
 
   const handleRadarData = async () => {
     const metrics = await GetContainerMetrics(container.id);
-    setRadarData(metrics);
+    /**	    cpuUsage: string;
+	    memoryUsage: string;
+	    networkInput: string;
+	    networkOutput: string;
+	    diskIO: string;
+	    runningProcesses: string; */
+    setRadarData({
+      cpuUsage: metrics.cpuUsage,
+      memoryUsage: metrics.memoryUsage,
+      networkInput: metrics.networkInput,
+      networkOutput: metrics.networkOutput,
+      diskIO: metrics.diskIO,
+      runningProcesses: metrics.runningProcesses,
+    });
   };
 
   const handleDelete = async (id: string, event: React.MouseEvent) => {
@@ -235,7 +246,7 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -272,37 +283,35 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
         </div>
 
         <div className="flex items-center justify-center">
-          {radarData && (
-            <RadarChart
-              data={[
-                {
-                  metric: "CPU Usage (%)",
-                  value: parseFloat(radarData.cpuUsage),
-                },
-                {
-                  metric: "Memory Usage (%)",
-                  value: parseFloat(radarData.memoryUsage),
-                },
-                {
-                  metric: "Network In (MB/s)",
-                  value: parseFloat(radarData.networkInput),
-                },
-                {
-                  metric: "Network Out (MB/s)",
-                  value: parseFloat(radarData.networkOutput),
-                },
-                {
-                  metric: "Disk I/O (MB/s)",
-                  value: parseFloat(radarData.diskIO),
-                },
-                {
-                  metric: "Running Processes",
-                  value: parseFloat(radarData.runningProcesses),
-                },
-              ]}
-              status={container.status.slice(0, 6)}
-            />
-          )}
+          <RadarChart
+            data={[
+              {
+                metric: "CPU Usage (%)",
+                value: parseFloat(radarData?.cpuUsage || "0"),
+              },
+              {
+                metric: "Memory (%)",
+                value: parseFloat(radarData?.memoryUsage || "0"),
+              },
+              {
+                metric: "Network In (MB/s)",
+                value: parseFloat(radarData?.networkInput || "0"),
+              },
+              {
+                metric: "Network Out (MB/s)",
+                value: parseFloat(radarData?.networkOutput || "0"),
+              },
+              {
+                metric: "Disk I/O (MB/s)",
+                value: parseFloat(radarData?.diskIO || "0"),
+              },
+              {
+                metric: "Running Processes",
+                value: parseFloat(radarData?.runningProcesses || "0"),
+              },
+            ]}
+            status={container.status.slice(0, 6)}
+          />
         </div>
       </div>
 
