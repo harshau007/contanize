@@ -191,7 +191,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
           </TabsContent>
           <TabsContent value="database">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Select value={database} onValueChange={setDatabase}>
+              <Select value={database} onValueChange={setDatabase} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Database" />
                 </SelectTrigger>

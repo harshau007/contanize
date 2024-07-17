@@ -74,6 +74,8 @@ export namespace main {
 	    status: string;
 	    url: string;
 	    public_ports: string[];
+	    isdatabase: boolean;
+	    dbuser: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new containerDetail(source);
@@ -90,6 +92,8 @@ export namespace main {
 	        this.status = source["status"];
 	        this.url = source["url"];
 	        this.public_ports = source["public_ports"];
+	        this.isdatabase = source["isdatabase"];
+	        this.dbuser = source["dbuser"];
 	    }
 	}
 	export class imageDetail {

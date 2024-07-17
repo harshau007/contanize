@@ -22,6 +22,8 @@ export function ListAllContainersJSON():Promise<Array<main.containerDetail>>;
 
 export function ListImages():Promise<Array<main.imageDetail>>;
 
+export function OpenPostgresTerminal(arg1:string,arg2:string):Promise<void>;
+
 export function RemoveContainer(arg1:string,arg2:boolean):Promise<void>;
 
 export function RemoveImages(arg1:string,arg2:boolean,arg3:boolean):Promise<void>;

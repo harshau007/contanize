@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { FiPlay, FiStopCircle, FiTrash2, FiExternalLink } from "react-icons/fi";
+import {
+  FiPlay,
+  FiStopCircle,
+  FiTrash2,
+  FiExternalLink,
+  FiTerminal,
+} from "react-icons/fi";
+import { GoTerminal } from "react-icons/go";
 import { main } from "../../wailsjs/go/models";
 import {
   URL,
@@ -11,6 +18,7 @@ import {
   GetMemoryStats,
   RemoveContainer,
   GetContainerMetrics,
+  OpenPostgresTerminal,
 } from "../../wailsjs/go/main/App";
 import {
   TooltipContent,
@@ -157,70 +165,140 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
           <CardTitle className="flex justify-between items-center">
             <span>{container.name}</span>
             <div>
-              <TooltipProvider>
-                <ShadTooltip>
-                  <TooltipTrigger>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="mr-2"
-                      onClick={handleStartContainer}
-                    >
+              {container.isdatabase ? (
+                <TooltipProvider>
+                  <ShadTooltip>
+                    <TooltipTrigger>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="mr-2"
+                        onClick={handleStartContainer}
+                      >
+                        {container.status.slice(0, 6) !== "Exited" ? (
+                          <FiStopCircle />
+                        ) : (
+                          <FiPlay />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
                       {container.status.slice(0, 6) !== "Exited" ? (
-                        <FiStopCircle />
+                        <p>Stop</p>
                       ) : (
-                        <FiPlay />
+                        <p>Run</p>
                       )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {container.status.slice(0, 6) !== "Exited" ? (
-                      <p>Stop</p>
-                    ) : (
-                      <p>Run</p>
-                    )}
-                  </TooltipContent>
-                </ShadTooltip>
-                <ShadTooltip>
-                  <TooltipTrigger>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={async () => {
-                        await URL(container.url);
-                      }}
-                      className={`mr-2 ${
-                        container.url &&
-                        container.status.slice(0, 6) !== "Exited"
-                          ? ""
-                          : "disabled:opacity-50 disabled:pointer-events-none"
-                      }`}
-                      disabled={container.status.slice(0, 6) === "Exited"}
-                    >
-                      <FiExternalLink />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>URL</p>
-                  </TooltipContent>
-                </ShadTooltip>
-                <ShadTooltip>
-                  <TooltipTrigger>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(event) => {
-                        handleDelete(container.id, event);
-                      }}
-                    >
-                      <FiTrash2 />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Remove</p>
-                  </TooltipContent>
-                </ShadTooltip>
-              </TooltipProvider>
+                    </TooltipContent>
+                  </ShadTooltip>
+                  <ShadTooltip>
+                    <TooltipTrigger>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={async () => {
+                          await OpenPostgresTerminal(
+                            container.name,
+                            container.dbuser
+                          );
+                        }}
+                        className={`mr-2 ${
+                          container.dbuser &&
+                          container.status.slice(0, 6) !== "Exited"
+                            ? ""
+                            : "disabled:opacity-50 disabled:pointer-events-none"
+                        }`}
+                        disabled={container.status.slice(0, 6) === "Exited"}
+                      >
+                        <FiTerminal />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Terminal</p>
+                    </TooltipContent>
+                  </ShadTooltip>
+                  <ShadTooltip>
+                    <TooltipTrigger>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(event) => {
+                          handleDelete(container.id, event);
+                        }}
+                      >
+                        <FiTrash2 />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Remove</p>
+                    </TooltipContent>
+                  </ShadTooltip>
+                </TooltipProvider>
+              ) : (
+                <TooltipProvider>
+                  <ShadTooltip>
+                    <TooltipTrigger>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="mr-2"
+                        onClick={handleStartContainer}
+                      >
+                        {container.status.slice(0, 6) !== "Exited" ? (
+                          <FiStopCircle />
+                        ) : (
+                          <FiPlay />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {container.status.slice(0, 6) !== "Exited" ? (
+                        <p>Stop</p>
+                      ) : (
+                        <p>Run</p>
+                      )}
+                    </TooltipContent>
+                  </ShadTooltip>
+                  <ShadTooltip>
+                    <TooltipTrigger>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={async () => {
+                          await URL(container.url);
+                        }}
+                        className={`mr-2 ${
+                          container.url &&
+                          container.status.slice(0, 6) !== "Exited"
+                            ? ""
+                            : "disabled:opacity-50 disabled:pointer-events-none"
+                        }`}
+                        disabled={container.status.slice(0, 6) === "Exited"}
+                      >
+                        <FiExternalLink />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>URL</p>
+                    </TooltipContent>
+                  </ShadTooltip>
+                  <ShadTooltip>
+                    <TooltipTrigger>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(event) => {
+                          handleDelete(container.id, event);
+                        }}
+                      >
+                        <FiTrash2 />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Remove</p>
+                    </TooltipContent>
+                  </ShadTooltip>
+                </TooltipProvider>
+              )}
             </div>
           </CardTitle>
         </CardHeader>
@@ -246,74 +324,82 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>CPU Usage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <GenericLineChart
-                data={parsedCpuUsage}
-                dataKey="usage"
-                title="CPU Usage"
-                color="hsl(var(--chart-1))"
-                status={container.status.slice(0, 6)}
-                yAxisDomain={[0, 100]}
-                tooltipFormatter={(value) => `${value.toFixed(2)}%`}
-              />
-            </CardContent>
-          </Card>
+      {container.status.slice(0, 6) !== "Exited" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>CPU Usage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <GenericLineChart
+                  data={parsedCpuUsage}
+                  dataKey="usage"
+                  title="CPU Usage"
+                  color="hsl(var(--chart-1))"
+                  status={container.status.slice(0, 6)}
+                  yAxisDomain={[0, 100]}
+                  tooltipFormatter={(value) => `${value.toFixed(2)}%`}
+                />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Memory Usage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <GenericLineChart
-                data={parsedMemUsage}
-                dataKey="usage"
-                title="Memory Usage"
-                color="hsl(var(--chart-2))"
-                status={container.status.slice(0, 6)}
-                tooltipFormatter={(value) => `${value.toFixed(2)} MiB`}
-              />
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Memory Usage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <GenericLineChart
+                  data={parsedMemUsage}
+                  dataKey="usage"
+                  title="Memory Usage"
+                  color="hsl(var(--chart-2))"
+                  status={container.status.slice(0, 6)}
+                  tooltipFormatter={(value) => `${value.toFixed(2)} MiB`}
+                />
+              </CardContent>
+            </Card>
+          </div>
 
-        <div className="flex items-center justify-center">
-          <RadarChart
-            data={[
-              {
-                metric: "CPU Usage (%)",
-                value: parseFloat(radarData?.cpuUsage || "0"),
-              },
-              {
-                metric: "Memory (%)",
-                value: parseFloat(radarData?.memoryUsage || "0"),
-              },
-              {
-                metric: "Network In (MB/s)",
-                value: parseFloat(radarData?.networkInput || "0"),
-              },
-              {
-                metric: "Network Out (MB/s)",
-                value: parseFloat(radarData?.networkOutput || "0"),
-              },
-              {
-                metric: "Disk I/O (MB/s)",
-                value: parseFloat(radarData?.diskIO || "0"),
-              },
-              {
-                metric: "Running Processes",
-                value: parseFloat(radarData?.runningProcesses || "0"),
-              },
-            ]}
-            status={container.status.slice(0, 6)}
-          />
+          <div className="flex items-center justify-center">
+            <RadarChart
+              data={[
+                {
+                  metric: "CPU Usage (%)",
+                  value: parseFloat(radarData?.cpuUsage || "0"),
+                },
+                {
+                  metric: "Memory (%)",
+                  value: parseFloat(radarData?.memoryUsage || "0"),
+                },
+                {
+                  metric: "Network In (MB/s)",
+                  value: parseFloat(radarData?.networkInput || "0"),
+                },
+                {
+                  metric: "Network Out (MB/s)",
+                  value: parseFloat(radarData?.networkOutput || "0"),
+                },
+                {
+                  metric: "Disk I/O (MB/s)",
+                  value: parseFloat(radarData?.diskIO || "0"),
+                },
+                {
+                  metric: "Running Processes",
+                  value: parseFloat(radarData?.runningProcesses || "0"),
+                },
+              ]}
+              status={container.status.slice(0, 6)}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <CardContent>
+          <div className="flex justify-center items-center h-72 text-gray-500">
+            Inactive Container
+          </div>
+        </CardContent>
+      )}
 
       <AlertDialog
         open={isRemoveDialogOpen}

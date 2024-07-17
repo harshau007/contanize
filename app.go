@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"devcontrolGUI/services"
+	"devbox/services"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -25,6 +25,59 @@ import (
 // App struct
 type App struct {
 	ctx context.Context
+}
+
+type containerDetail struct {
+	Id          string   `json:"id"`
+	Name        string   `json:"name"`
+	Image       string   `json:"image"`
+	ImageId     string   `json:"image_id"`
+	Volume      string   `json:"volume"`
+	Created     string   `json:"created"`
+	Status      string   `json:"status"`
+	URL         string   `json:"url"`
+	PublicPorts []string `json:"public_ports"`
+	IsDatabase  bool     `json:"isdatabase"`
+	DBUser      string   `json:"dbuser"`
+}
+
+type Port struct {
+	IP         string
+	PublicPort int
+}
+
+type imageDetail struct {
+	Repository string `json:"repository"`
+	Tag        string `json:"tag"`
+	ImageID    string `json:"image_id"`
+	Created    string `json:"created"`
+	Size       string `json:"size"`
+	Arch       string `json:"arch"`
+	Os         string `json:"os"`
+}
+
+type LayerInfo struct {
+	ID   string `json:"id"`
+	Size int64  `json:"size"`
+}
+
+type CPUStats struct {
+	Time  string `json:"time"`
+	Usage string `json:"usage"`
+}
+
+type MemoryStats struct {
+	Time  string `json:"time"`
+	Usage string `json:"usage"`
+}
+
+type ContainerMetrics struct {
+	CPUUsage         string `json:"cpuUsage"`
+	MemoryUsage      string `json:"memoryUsage"`
+	NetworkInput     string `json:"networkInput"`
+	NetworkOutput    string `json:"networkOutput"`
+	DiskIO           string `json:"diskIO"`
+	RunningProcesses string `json:"runningProcesses"`
 }
 
 // NewApp creates a new App application struct
@@ -60,18 +113,6 @@ func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
-type containerDetail struct {
-	Id          string   `json:"id"`
-	Name        string   `json:"name"`
-	Image       string   `json:"image"`
-	ImageId     string   `json:"image_id"`
-	Volume      string   `json:"volume"`
-	Created     string   `json:"created"`
-	Status      string   `json:"status"`
-	URL         string   `json:"url"`
-	PublicPorts []string `json:"public_ports"`
-}
-
 func (a *App) SelectFolder() string {
 	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title:           "Select Folder",
@@ -83,11 +124,6 @@ func (a *App) SelectFolder() string {
 	}
 
 	return dir
-}
-
-type Port struct {
-	IP         string
-	PublicPort int
 }
 
 func (a *App) ListAllContainersJSON() []containerDetail {
@@ -152,6 +188,18 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 			}
 		}
 
+		isDatabase := false
+		DBUser := "none"
+		for k, v := range container.Labels {
+			// fmt.Printf("key[%s] value[%s]\n", k, v)
+			if strings.Contains(v, "Database") {
+				isDatabase = true
+			}
+			if strings.Contains(k, "dbuser") {
+				DBUser = v
+			}
+		}
+
 		containerInfo = append(containerInfo, containerDetail{
 			Id:          containerID[:10],
 			Image:       image,
@@ -162,69 +210,46 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 			Name:        names,
 			URL:         url,
 			PublicPorts: publicPorts,
+			IsDatabase:  isDatabase,
+			DBUser:      DBUser,
 		})
 	}
 	// fmt.Println(containerInfo)
 	return containerInfo
 }
 
-func truncateString(s string, maxLength int) string {
-	if len(s) > maxLength {
-		return s[:maxLength-3] + "..."
-	}
-	return s
-}
-
-func maxVolumeWidth(containers []types.Container) int {
-	maxWidth := 0
-	for _, container := range containers {
-		if len(container.Mounts) > 0 {
-			if len(container.Mounts[0].Source) > maxWidth {
-				maxWidth = len(container.Mounts[0].Source)
-			}
-		}
-	}
-	return maxWidth
-}
-
 func (a *App) URL(url string) {
 	cmd := exec.Command("xdg-open", url)
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("Discord Error: " + err.Error())
+		fmt.Println("URL Error: " + err.Error())
 	}
 }
 
 func (a *App) CreateCodeInstance(name string, packageName string, folder string, ports string, template string) (string, error) {
 	var output []byte
-	var err error
 	if strings.Contains(template, "next-js") {
-		cmd := exec.Command("portdevctl", strings.ToLower(name), "nodelts", folder, ports, template)
-		output, err = cmd.CombinedOutput()
+		err := services.CreateContainer(strings.ToLower(name), "nodelts", folder, ports, template)
 		if err != nil {
 			fmt.Printf("error executing the script: %s", err)
 		}
 	} else if strings.Contains(template, "next-ts") {
-		cmd := exec.Command("portdevctl", strings.ToLower(name), "nodelts", folder, ports, template)
-		output, err = cmd.CombinedOutput()
+		err := services.CreateContainer(strings.ToLower(name), "nodelts", folder, ports, template)
 		if err != nil {
 			fmt.Printf("error executing the script: %s", err)
 		}
 	} else if strings.Contains(template, "nest") {
-		cmd := exec.Command("portdevctl", strings.ToLower(name), "nodelts", folder, ports, template)
-		output, err = cmd.CombinedOutput()
+		err := services.CreateContainer(strings.ToLower(name), "nodelts", folder, ports, template)
 		if err != nil {
 			fmt.Printf("error executing the script: %s", err)
 		}
 	} else if strings.Contains(template, "goftt") {
-		cmd := exec.Command("portdevctl", strings.ToLower(name), "go", folder, ports, template)
-		output, err = cmd.CombinedOutput()
+		err := services.CreateContainer(strings.ToLower(name), "go", folder, ports, template)
 		if err != nil {
 			fmt.Printf("error executing the script: %s", err)
 		}
 	} else {
-		cmd := exec.Command("portdevctl", strings.ToLower(name), packageName, folder, ports, "none")
-		output, err = cmd.CombinedOutput()
+		err := services.CreateContainer(strings.ToLower(name), packageName, folder, ports, "none")
 		if err != nil {
 			fmt.Printf("error executing the script: %s", err)
 		}
@@ -232,7 +257,7 @@ func (a *App) CreateCodeInstance(name string, packageName string, folder string,
 	outputLines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	containerId := outputLines[len(outputLines)-1]
 
-	return containerId[:10], nil
+	return containerId, nil
 }
 
 func (a *App) RemoveContainer(id string, force bool) {
@@ -265,17 +290,10 @@ func (a *App) ForceRemoveContainer(id string) {
 }
 
 func (a *App) StartContainer(name string, port string) string {
-	cmd := exec.Command("startdevctl", name, port)
-	output, err := cmd.CombinedOutput()
+	err := services.StartContainer(name, port)
 	if err != nil {
-		fmt.Printf("Error executing the script: %v\n", err)
-		return "Failed - 1"
+		fmt.Printf("Error starting container: %v\n", err)
 	}
-
-	outputLines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	containerId := outputLines[len(outputLines)-1]
-	fmt.Printf("\nContainer created with ID: %s\n", containerId[:10])
-
 	return "Success"
 }
 
@@ -298,16 +316,6 @@ func (a *App) StopContainer(name string) string {
 		}
 	}
 	return "Success"
-}
-
-type imageDetail struct {
-	Repository string `json:"repository"`
-	Tag        string `json:"tag"`
-	ImageID    string `json:"image_id"`
-	Created    string `json:"created"`
-	Size       string `json:"size"`
-	Arch       string `json:"arch"`
-	Os         string `json:"os"`
 }
 
 func (a *App) ListImages() []imageDetail {
@@ -371,27 +379,6 @@ func (a *App) ListImages() []imageDetail {
 	return imageDetails
 }
 
-func getTag(repoTag string) string {
-	parts := strings.SplitN(repoTag, ":", 2)
-	if len(parts) == 2 {
-		return parts[1]
-	}
-	return "latest"
-}
-
-func formatSize(size int64) string {
-	const unit = 1024
-	if size < unit {
-		return fmt.Sprintf("%d B", size)
-	}
-	div, exp := int64(unit), 0
-	for n := size / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
-}
-
 func (a *App) RemoveImages(id string, force bool, prune bool) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -404,11 +391,6 @@ func (a *App) RemoveImages(id string, force bool, prune bool) {
 		fmt.Println(err)
 	}
 	fmt.Println(images[1].Deleted)
-}
-
-type LayerInfo struct {
-	ID   string `json:"id"`
-	Size int64  `json:"size"`
 }
 
 func (a *App) GetImageLayerSize(imageName string) ([]LayerInfo, error) {
@@ -442,16 +424,6 @@ func (a *App) GetImageLayerSize(imageName string) ([]LayerInfo, error) {
 	}
 
 	return layers, nil
-}
-
-type CPUStats struct {
-	Time  string `json:"time"`
-	Usage string `json:"usage"`
-}
-
-type MemoryStats struct {
-	Time  string `json:"time"`
-	Usage string `json:"usage"`
 }
 
 func (a *App) GetCPUStats(containerID string) []CPUStats {
@@ -570,15 +542,6 @@ func (a *App) GetMemoryStats(containerID string) []MemoryStats {
 	}
 }
 
-type ContainerMetrics struct {
-	CPUUsage         string `json:"cpuUsage"`
-	MemoryUsage      string `json:"memoryUsage"`
-	NetworkInput     string `json:"networkInput"`
-	NetworkOutput    string `json:"networkOutput"`
-	DiskIO           string `json:"diskIO"`
-	RunningProcesses string `json:"runningProcesses"`
-}
-
 func (a *App) GetContainerMetrics(containerID string) (ContainerMetrics, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -646,4 +609,48 @@ func (a *App) CreateDB(dbtype, username, password, dbname, contname string) stri
 	default:
 		return "No Container Created"
 	}
+}
+
+func (a *App) OpenPostgresTerminal(contName, dbuser string) {
+	services.ConnectToPostgres(contName, dbuser)
+}
+
+func truncateString(s string, maxLength int) string {
+	if len(s) > maxLength {
+		return s[:maxLength-3] + "..."
+	}
+	return s
+}
+
+func maxVolumeWidth(containers []types.Container) int {
+	maxWidth := 0
+	for _, container := range containers {
+		if len(container.Mounts) > 0 {
+			if len(container.Mounts[0].Source) > maxWidth {
+				maxWidth = len(container.Mounts[0].Source)
+			}
+		}
+	}
+	return maxWidth
+}
+
+func getTag(repoTag string) string {
+	parts := strings.SplitN(repoTag, ":", 2)
+	if len(parts) == 2 {
+		return parts[1]
+	}
+	return "latest"
+}
+
+func formatSize(size int64) string {
+	const unit = 1024
+	if size < unit {
+		return fmt.Sprintf("%d B", size)
+	}
+	div, exp := int64(unit), 0
+	for n := size / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
 }

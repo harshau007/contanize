@@ -42,6 +42,10 @@ export function ListImages() {
   return window['go']['main']['App']['ListImages']();
 }
 
+export function OpenPostgresTerminal(arg1, arg2) {
+  return window['go']['main']['App']['OpenPostgresTerminal'](arg1, arg2);
+}
+
 export function RemoveContainer(arg1, arg2) {
   return window['go']['main']['App']['RemoveContainer'](arg1, arg2);
 }

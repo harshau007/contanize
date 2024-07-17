@@ -49,9 +49,7 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
   const handleImagerLayer = async () => {
     const layerResp = await GetImageLayerSize(image.repository);
     layerResp.forEach((layer, index) => {
-      if (layer.id === "<missing>") {
-        layer.id = `Layer ${index + 1}`;
-      }
+      layer.id = `Layer ${index + 1}`;
     });
     setImageLayerInfo(layerResp);
   };
