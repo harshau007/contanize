@@ -104,24 +104,23 @@ func openTerminal(cmd string) {
 	switch DesktopEnv {
 	case "xfce":
 		pkexecCmd = exec.Command("xfce4-terminal", "-e", cmd)
-		if err := pkexecCmd.Run(); err != nil {
-			fmt.Printf("Error executing command: %v\n", err)
-		}
 	case "gnome":
-		pkexecCmd = exec.Command("gnome-terminal", "--", cmd)
-		if err := pkexecCmd.Run(); err != nil {
-			fmt.Printf("Error executing command: %v\n", err)
-		}
+		pkexecCmd = exec.Command("gnome-terminal", "--", "bash", "-c", cmd)
 	case "kde":
 		pkexecCmd = exec.Command("konsole", "-e", cmd)
-		if err := pkexecCmd.Run(); err != nil {
-			fmt.Printf("Error executing command: %v\n", err)
-		}
+	case "mate":
+		pkexecCmd = exec.Command("mate-terminal", "-e", cmd)
+	case "lxde":
+		pkexecCmd = exec.Command("lxterminal", "-e", cmd)
+	case "lxqt":
+		pkexecCmd = exec.Command("qterminal", "-e", cmd)
 	default:
-		fmt.Printf("unsupported desktop environment: %s\n", DesktopEnv)
-		if err := pkexecCmd.Run(); err != nil {
-			fmt.Printf("Error executing command: %v\n", err)
-		}
+		fmt.Printf("Unsupported desktop environment: %s\n", DesktopEnv)
+		return
+	}
+
+	if err := pkexecCmd.Run(); err != nil {
+		fmt.Printf("Error executing command: %v\n", err)
 	}
 }
 
