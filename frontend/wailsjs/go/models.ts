@@ -76,6 +76,7 @@ export namespace main {
 	    public_ports: string[];
 	    isdatabase: boolean;
 	    dbuser: string;
+	    db: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new containerDetail(source);
@@ -94,6 +95,7 @@ export namespace main {
 	        this.public_ports = source["public_ports"];
 	        this.isdatabase = source["isdatabase"];
 	        this.dbuser = source["dbuser"];
+	        this.db = source["db"];
 	    }
 	}
 	export class imageDetail {

@@ -29,10 +29,10 @@ func NewDockerStarter() (*DockerStarter, error) {
 	}, nil
 }
 
-func (ds *DockerStarter) GetContainerInfo(containerName string) (string, string, error) {
+func (ds *DockerStarter) GetContainerInfo(containerName string) (string, string, map[string]string, error) {
 	container, err := ds.cli.ContainerInspect(ds.ctx, containerName)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to inspect container: %v", err)
+		return "", "", nil, fmt.Errorf("failed to inspect container: %v", err)
 	}
 
 	image := container.Config.Image
@@ -40,8 +40,9 @@ func (ds *DockerStarter) GetContainerInfo(containerName string) (string, string,
 	if len(container.Mounts) > 0 {
 		volume = container.Mounts[0].Source
 	}
+	labels := container.Config.Labels
 
-	return image, volume, nil
+	return image, volume, labels, nil
 }
 
 func (ds *DockerStarter) FindAvailablePort(startPort int) int {
@@ -98,13 +99,30 @@ func (ds *DockerStarter) RunContainer(containerName, image, volume string, ports
 }
 
 func (ds *DockerStarter) StartContainer(containerName string, additionalPorts string) error {
-	image, volume, err := ds.GetContainerInfo(containerName)
+	image, volume, labels, err := ds.GetContainerInfo(containerName)
 	if err != nil {
 		return err
 	}
 
 	ports := make(map[string]string)
-	ports["8080"] = strconv.Itoa(ds.FindAvailablePort(8080))
+	defaultPortAssigned := false
+
+	for _, v := range labels {
+		if strings.Contains(v, "postgres") {
+			ports["5432"] = strconv.Itoa(ds.FindAvailablePort(5432))
+			defaultPortAssigned = true
+			break
+		}
+		if strings.Contains(v, "mongo") {
+			ports["27017"] = strconv.Itoa(ds.FindAvailablePort(27017))
+			defaultPortAssigned = true
+			break
+		}
+	}
+
+	if !defaultPortAssigned {
+		ports["8080"] = strconv.Itoa(ds.FindAvailablePort(8080))
+	}
 
 	additionalPortsSlice := strings.Split(additionalPorts, ",")
 	for _, p := range additionalPortsSlice {

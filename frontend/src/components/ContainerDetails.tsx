@@ -19,6 +19,7 @@ import {
   RemoveContainer,
   GetContainerMetrics,
   OpenPostgresTerminal,
+  OpenMongoTerminal,
 } from "../../wailsjs/go/main/App";
 import {
   TooltipContent,
@@ -196,10 +197,18 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
                         variant="outline"
                         size="icon"
                         onClick={async () => {
-                          await OpenPostgresTerminal(
-                            container.name,
-                            container.dbuser
-                          );
+                          if (container.db.match("postgres")) {
+                            await OpenPostgresTerminal(
+                              container.name,
+                              container.dbuser
+                            );
+                          }
+                          if (container.db.match("mongo")) {
+                            await OpenMongoTerminal(
+                              container.name,
+                              container.dbuser
+                            );
+                          }
                         }}
                         className={`mr-2 ${
                           container.dbuser &&
@@ -444,7 +453,7 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
                 className="col-span-3"
                 value={additionalPort}
                 onChange={handlePortChange}
-                placeholder="e.g., 8080"
+                placeholder="e.g., 3000"
               />
             </div>
           </div>

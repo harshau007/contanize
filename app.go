@@ -39,6 +39,7 @@ type containerDetail struct {
 	PublicPorts []string `json:"public_ports"`
 	IsDatabase  bool     `json:"isdatabase"`
 	DBUser      string   `json:"dbuser"`
+	DB          string   `json:"db"`
 }
 
 type Port struct {
@@ -190,13 +191,25 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 
 		isDatabase := false
 		DBUser := "none"
-		for k, v := range container.Labels {
-			// fmt.Printf("key[%s] value[%s]\n", k, v)
-			if strings.Contains(v, "Database") {
-				isDatabase = true
-			}
-			if strings.Contains(k, "dbuser") {
-				DBUser = v
+		DB := ""
+		if container.Labels != nil {
+			for k, v := range container.Labels {
+				// fmt.Printf("key[%s] value[%s]\n", k, v)
+				if strings.Contains(v, "Database") {
+					isDatabase = true
+				}
+
+				if strings.Contains(k, "dbuser") {
+					DBUser = v
+				}
+
+				if strings.Contains(v, "mongo") {
+					DB = "mongo"
+				}
+
+				if strings.Contains(v, "postgres") {
+					DB = "postgres"
+				}
 			}
 		}
 
@@ -212,6 +225,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 			PublicPorts: publicPorts,
 			IsDatabase:  isDatabase,
 			DBUser:      DBUser,
+			DB:          DB,
 		})
 	}
 	// fmt.Println(containerInfo)
@@ -606,6 +620,12 @@ func (a *App) CreateDB(dbtype, username, password, dbname, contname string) stri
 			log.Fatal("Error occured while creating Postgres Instance", err)
 		}
 		return id
+	case "mongo":
+		id, err := services.RunMongoContainer(username, password, dbname, contname)
+		if err != nil {
+			log.Fatal("Error occured while creating Postgres Instance", err)
+		}
+		return id
 	default:
 		return "No Container Created"
 	}
@@ -613,6 +633,10 @@ func (a *App) CreateDB(dbtype, username, password, dbname, contname string) stri
 
 func (a *App) OpenPostgresTerminal(contName, dbuser string) {
 	services.ConnectToPostgres(contName, dbuser)
+}
+
+func (a *App) OpenMongoTerminal(contName, dbuser string) {
+	services.ConnectToMongo(contName, dbuser)
 }
 
 func truncateString(s string, maxLength int) string {

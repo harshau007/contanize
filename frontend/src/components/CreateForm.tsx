@@ -202,9 +202,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
                   </SelectGroup>
                   <SelectGroup>
                     <SelectLabel>NoSQL</SelectLabel>
-                    <SelectItem value="mongo" disabled>
-                      MongoDB
-                    </SelectItem>
+                    <SelectItem value="mongo">MongoDB</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>

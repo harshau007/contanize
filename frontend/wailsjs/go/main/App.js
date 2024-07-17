@@ -42,6 +42,10 @@ export function ListImages() {
   return window['go']['main']['App']['ListImages']();
 }
 
+export function OpenMongoTerminal(arg1, arg2) {
+  return window['go']['main']['App']['OpenMongoTerminal'](arg1, arg2);
+}
+
 export function OpenPostgresTerminal(arg1, arg2) {
   return window['go']['main']['App']['OpenPostgresTerminal'](arg1, arg2);
 }
