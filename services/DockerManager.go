@@ -22,13 +22,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DockerCreate manages Docker operations
 type DockerCreate struct {
 	cli        *client.Client
 	configPath string
 }
 
-// NewDockerCreate creates a new DockerCreate
 func NewDockerCreate() (*DockerCreate, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -49,22 +47,6 @@ func NewDockerCreate() (*DockerCreate, error) {
 	}, nil
 }
 
-// SaveContainerInfo saves container information to a YAML file
-func (dc *DockerCreate) SaveContainerInfo(info ContainerInfo) error {
-	data, err := yaml.Marshal(info)
-	if err != nil {
-		return fmt.Errorf("failed to marshal container info: %v", err)
-	}
-
-	err = os.WriteFile(dc.configPath, data, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write container info: %v", err)
-	}
-
-	return nil
-}
-
-// LoadContainerInfo loads container information from a YAML file
 func (dc *DockerCreate) LoadContainerInfo() (*ContainerInfo, error) {
 	data, err := os.ReadFile(dc.configPath)
 	if err != nil {
@@ -83,7 +65,6 @@ func (dc *DockerCreate) LoadContainerInfo() (*ContainerInfo, error) {
 	return &info, nil
 }
 
-// isPortInUse checks if a port is in use
 func isPortInUse(port int) bool {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -93,7 +74,6 @@ func isPortInUse(port int) bool {
 	return false
 }
 
-// findAvailablePort finds the first available port starting from the given port
 func findAvailablePort(startPort int) int {
 	port := startPort
 	for isPortInUse(port) {
@@ -102,7 +82,6 @@ func findAvailablePort(startPort int) int {
 	return port
 }
 
-// generateRandomString generates a random string of given length
 func generateRandomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -113,7 +92,6 @@ func generateRandomString(length int) string {
 	return string(b)
 }
 
-// StartContainer starts a new container
 func (dc *DockerCreate) CreateContainer(name, technology, volume, additionalPorts, templateName string) error {
 	ctx := context.Background()
 
@@ -132,7 +110,7 @@ func (dc *DockerCreate) CreateContainer(name, technology, volume, additionalPort
 	// Generate image name
 	imageName := fmt.Sprintf("%s-%s", name, generateRandomString(8))
 
-	// Build Docker image
+	// Building Docker image
 	buildArgs := map[string]*string{
 		"ADDITIONAL_PACKAGES": &technology,
 		"ADDITIONAL_PORT":     &additionalPorts,
@@ -199,29 +177,26 @@ func (dc *DockerCreate) CreateContainer(name, technology, volume, additionalPort
 	}
 	fmt.Println("Build output:", buildOutput.String())
 
-	mainPort := findAvailablePort(8080)
-	var ports []int
-	ports = append(ports, mainPort)
-
-	additionalPortsList := strings.Split(additionalPorts, ",")
-	for _, portStr := range additionalPortsList {
-		if portStr != "" {
-			portInt, _ := strconv.Atoi(portStr)
-			availablePort := findAvailablePort(portInt)
-			ports = append(ports, availablePort)
-		}
-	}
-
+	portMappings := make(map[string]string)
 	portBindings := nat.PortMap{}
 	exposedPorts := nat.PortSet{}
-	for i, port := range ports {
-		hostPort := strconv.Itoa(port)
-		containerPort := hostPort
-		if i == 0 {
-			containerPort = "8080"
+
+	// Handling main port (8080)
+	mainExternalPort := findAvailablePort(8080)
+	portMappings["8080"] = strconv.Itoa(mainExternalPort)
+	portBindings[nat.Port("8080")] = []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: strconv.Itoa(mainExternalPort)}}
+	exposedPorts[nat.Port("8080")] = struct{}{}
+
+	// Handling additional ports
+	additionalPortsList := strings.Split(additionalPorts, ",")
+	for _, internalPort := range additionalPortsList {
+		if internalPort != "" {
+			portInt, _ := strconv.Atoi(internalPort)
+			externalPort := findAvailablePort(portInt)
+			portMappings[internalPort] = strconv.Itoa(externalPort)
+			portBindings[nat.Port(internalPort)] = []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: strconv.Itoa(externalPort)}}
+			exposedPorts[nat.Port(internalPort)] = struct{}{}
 		}
-		portBindings[nat.Port(containerPort)] = []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: hostPort}}
-		exposedPorts[nat.Port(containerPort)] = struct{}{}
 	}
 
 	resp, err := dc.cli.ContainerCreate(ctx, &container.Config{
@@ -245,7 +220,7 @@ func (dc *DockerCreate) CreateContainer(name, technology, volume, additionalPort
 		ContainerID: resp.ID,
 		Name:        name,
 		Image:       imageName,
-		Ports:       ports,
+		Ports:       portMappings,
 		Volume:      volume,
 		Template:    templateName,
 	}
@@ -256,18 +231,14 @@ func (dc *DockerCreate) CreateContainer(name, technology, volume, additionalPort
 	}
 	defer transaction.rollback()
 	transaction.CreateEntry(info)
-	// if err := dc.SaveContainerInfo(info); err != nil {
-	// 	return fmt.Errorf("failed to save container info: %v", err)
-	// }
 	if err := transaction.commit(); err != nil {
 		log.Fatalf("Error committing transaction: %v", err)
 	}
 
-	fmt.Printf("Container %s started successfully with ports %v\n", name, ports)
+	fmt.Printf("Container %s started successfully with ports %v\n", name, portMappings)
 	return nil
 }
 
-// StopContainer stops and removes a container
 func (dc *DockerCreate) StopContainer(name string) error {
 	ctx := context.Background()
 

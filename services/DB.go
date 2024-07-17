@@ -11,12 +11,12 @@ import (
 )
 
 type ContainerInfo struct {
-	ContainerID string `yaml:"container_id"`
-	Name        string `yaml:"name"`
-	Image       string `yaml:"image"`
-	Ports       []int  `yaml:"ports"`
-	Volume      string `yaml:"volume"`
-	Template    string `yaml:"template"`
+	ContainerID string            `yaml:"container_id"`
+	Name        string            `yaml:"name"`
+	Image       string            `yaml:"image"`
+	Ports       map[string]string `yaml:"ports"`
+	Volume      string            `yaml:"volume"`
+	Template    string            `yaml:"template"`
 }
 
 type Database []ContainerInfo

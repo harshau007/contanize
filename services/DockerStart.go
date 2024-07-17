@@ -112,7 +112,7 @@ func (ds *DockerStarter) StartContainer(containerName string, additionalPorts st
 		if err != nil {
 			log.Fatal("Cannot convert Port to Int")
 		}
-		availablePort := ds.FindAvailablePort(inPort) // Start from Input Port for additional ports
+		availablePort := ds.FindAvailablePort(inPort)
 		ports[p] = strconv.Itoa(availablePort)
 	}
 
