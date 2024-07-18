@@ -40,6 +40,7 @@ type containerDetail struct {
 	IsDatabase  bool     `json:"isdatabase"`
 	DBUser      string   `json:"dbuser"`
 	DB          string   `json:"db"`
+	DBPass      string   `json:"dbpass"`
 }
 
 type Port struct {
@@ -192,6 +193,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 		isDatabase := false
 		DBUser := "none"
 		DB := ""
+		DBPass := ""
 		if container.Labels != nil {
 			for k, v := range container.Labels {
 				// fmt.Printf("key[%s] value[%s]\n", k, v)
@@ -210,6 +212,10 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 				if strings.Contains(v, "postgres") {
 					DB = "postgres"
 				}
+
+				if strings.Contains(k, "dbpass") {
+					DBPass = v
+				}
 			}
 		}
 
@@ -226,6 +232,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 			IsDatabase:  isDatabase,
 			DBUser:      DBUser,
 			DB:          DB,
+			DBPass:      DBPass,
 		})
 	}
 	// fmt.Println(containerInfo)
@@ -452,7 +459,6 @@ func (a *App) GetCPUStats(containerID string) []CPUStats {
 	_, err = cli.ContainerInspect(context.Background(), containerID)
 	if err != nil {
 		if client.IsErrNotFound(err) {
-			// log.Printf("Container %s does not exist. Skipping CPU stats collection.", containerID)
 			return []CPUStats{}
 		}
 		log.Printf("error inspecting container: %v", err)
@@ -465,12 +471,11 @@ func (a *App) GetCPUStats(containerID string) []CPUStats {
 		log.Printf("error inspecting container: %v", err)
 		return []CPUStats{}
 	}
-
 	if !containerInfo.State.Running {
-		// log.Printf("Container %s is not running. Skipping CPU stats collection.", containerID)
 		return []CPUStats{}
 	}
 
+	// Get initial stats
 	stats, err := cli.ContainerStats(context.Background(), containerID, false)
 	if err != nil {
 		log.Printf("error getting container stats: %v", err)
@@ -478,20 +483,41 @@ func (a *App) GetCPUStats(containerID string) []CPUStats {
 	}
 	defer stats.Body.Close()
 
-	var statsJSON types.StatsJSON
-	if err := json.NewDecoder(stats.Body).Decode(&statsJSON); err != nil {
-		log.Printf("error decoding stats JSON: %v", err)
+	var initialStats types.StatsJSON
+	if err := json.NewDecoder(stats.Body).Decode(&initialStats); err != nil {
+		log.Printf("error decoding initial stats JSON: %v", err)
 		return []CPUStats{}
 	}
 
-	cpuDelta := float64(statsJSON.CPUStats.CPUUsage.TotalUsage - statsJSON.PreCPUStats.CPUUsage.TotalUsage)
-	systemDelta := float64(statsJSON.CPUStats.SystemUsage - statsJSON.PreCPUStats.SystemUsage)
-	cpuUsage := (cpuDelta / systemDelta) * float64(len(statsJSON.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+	// Wait for a short duration to get a second sample
+	time.Sleep(1 * time.Second)
+
+	// Get updated stats
+	stats, err = cli.ContainerStats(context.Background(), containerID, false)
+	if err != nil {
+		log.Printf("error getting updated container stats: %v", err)
+		return []CPUStats{}
+	}
+	defer stats.Body.Close()
+
+	var updatedStats types.StatsJSON
+	if err := json.NewDecoder(stats.Body).Decode(&updatedStats); err != nil {
+		log.Printf("error decoding updated stats JSON: %v", err)
+		return []CPUStats{}
+	}
+
+	// Calculate CPU usage
+	cpuDelta := float64(updatedStats.CPUStats.CPUUsage.TotalUsage - initialStats.CPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(updatedStats.CPUStats.SystemUsage - initialStats.CPUStats.SystemUsage)
+	cpuUsage := 0.0
+	if systemDelta > 0 {
+		cpuUsage = (cpuDelta / systemDelta) * float64(len(updatedStats.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+	}
 
 	return []CPUStats{
 		{
 			Time:  time.Now().Format(time.RFC3339),
-			Usage: fmt.Sprintf("%.5f%%", cpuUsage),
+			Usage: fmt.Sprintf("%.2f%%", cpuUsage),
 		},
 	}
 }

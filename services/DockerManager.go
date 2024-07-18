@@ -191,6 +191,10 @@ func (dc *DockerCreate) CreateContainer(name, technology, volume, additionalPort
 	additionalPortsList := strings.Split(additionalPorts, ",")
 	for _, internalPort := range additionalPortsList {
 		if internalPort != "" {
+			internalPort = strings.TrimSpace(internalPort)
+			if internalPort == "" {
+				continue
+			}
 			portInt, _ := strconv.Atoi(internalPort)
 			externalPort := findAvailablePort(portInt)
 			portMappings[internalPort] = strconv.Itoa(externalPort)

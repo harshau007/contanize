@@ -70,6 +70,7 @@ func RunMongoContainer(user, password, db, containerName string) (string, error)
         --label type=Database \
         --label dbuser=%s \
         --label db=mongo \
+		--label dbpass=%s \
         -e MONGO_INITDB_ROOT_USERNAME=%s \
         -e MONGO_INITDB_ROOT_PASSWORD=%s \
         -e MONGO_INITDB_DATABASE=%s \
@@ -81,7 +82,7 @@ func RunMongoContainer(user, password, db, containerName string) (string, error)
         --health-timeout 5s \
         --health-retries 5 \
         mongo:latest`,
-		user, user, password, db, freeport, containerName)
+		user, password, user, password, db, freeport, containerName)
 
 	cmd := exec.Command("sh", "-c", command)
 	output, err := cmd.CombinedOutput()

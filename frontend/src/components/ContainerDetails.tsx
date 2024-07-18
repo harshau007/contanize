@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import {
@@ -7,6 +7,9 @@ import {
   FiTrash2,
   FiExternalLink,
   FiTerminal,
+  FiEyeOff,
+  FiEye,
+  FiCopy,
 } from "react-icons/fi";
 import { GoTerminal } from "react-icons/go";
 import { main } from "../../wailsjs/go/models";
@@ -63,6 +66,8 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
   const [additionalPort, setAdditionalPort] = useState("");
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [radarData, setRadarData] = useState<main.ContainerMetrics>();
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleCpuUsage = async () => {
     const cpuStats = await GetCPUStats(container.id);
@@ -133,6 +138,37 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
     if (value === "" || /^\d+$/.test(value)) {
       setAdditionalPort(value);
     }
+  };
+
+  const getConnectionString = useCallback(
+    (showPass: boolean = false) => {
+      const port =
+        container.public_ports && container.public_ports.length > 0
+          ? container.public_ports[0]
+          : "";
+      if (container.db.match("postgres")) {
+        return `postgresql://${container.dbuser}:${
+          showPass ? container.dbpass : "********"
+        }@localhost:${port}/${container.db}`;
+      } else if (container.db.match("mongo")) {
+        return `mongodb://${container.dbuser}:${
+          showPass ? container.dbpass : "********"
+        }@localhost:${port}/${container.db}`;
+      }
+      return "";
+    },
+    [container]
+  );
+
+  const handleShowPassword = () => {
+    setShowPassword(true);
+    setTimeout(() => setShowPassword(false), 3000);
+  };
+
+  const handleCopyConnectionString = () => {
+    navigator.clipboard.writeText(getConnectionString(true));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   useEffect(() => {
@@ -330,6 +366,52 @@ const ContainerDetails: React.FC<ContainerDetailsProps> = ({ container }) => {
               ? container.public_ports.join(", ")
               : "<none>"}
           </p>
+          {container?.isdatabase &&
+            container?.status?.slice(0, 6) !== "Exited" && (
+              <div className="mt-4">
+                <p className="font-semibold mb-2">Connection String:</p>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    type="text"
+                    value={getConnectionString(showPassword)}
+                    readOnly
+                    className="flex-grow"
+                  />
+                  <TooltipProvider>
+                    <ShadTooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={handleShowPassword}
+                        >
+                          {showPassword ? <FiEyeOff /> : <FiEye />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{showPassword ? "Hide" : "Show"} Password</p>
+                      </TooltipContent>
+                    </ShadTooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <ShadTooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={handleCopyConnectionString}
+                        >
+                          <FiCopy />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{copied ? "Copied!" : "Copy"}</p>
+                      </TooltipContent>
+                    </ShadTooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+            )}
         </CardContent>
       </Card>
 

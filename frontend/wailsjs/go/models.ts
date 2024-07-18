@@ -77,6 +77,7 @@ export namespace main {
 	    isdatabase: boolean;
 	    dbuser: string;
 	    db: string;
+	    dbpass: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new containerDetail(source);
@@ -96,6 +97,7 @@ export namespace main {
 	        this.isdatabase = source["isdatabase"];
 	        this.dbuser = source["dbuser"];
 	        this.db = source["db"];
+	        this.dbpass = source["dbpass"];
 	    }
 	}
 	export class imageDetail {

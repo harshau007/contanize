@@ -124,14 +124,23 @@ func (ds *DockerStarter) StartContainer(containerName string, additionalPorts st
 		ports["8080"] = strconv.Itoa(ds.FindAvailablePort(8080))
 	}
 
-	additionalPortsSlice := strings.Split(additionalPorts, ",")
-	for _, p := range additionalPortsSlice {
-		inPort, err := strconv.Atoi(p)
-		if err != nil {
-			log.Fatal("Cannot convert Port to Int")
+	if additionalPorts != "" {
+		additionalPortsSlice := strings.Split(additionalPorts, ",")
+		for _, p := range additionalPortsSlice {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			inPort, err := strconv.Atoi(p)
+			if err != nil {
+				log.Printf("Cannot convert Port '%s' to Int: %v", p, err)
+				continue
+			}
+			availablePort := ds.FindAvailablePort(inPort)
+			ports[p] = strconv.Itoa(availablePort)
 		}
-		availablePort := ds.FindAvailablePort(inPort)
-		ports[p] = strconv.Itoa(availablePort)
+	} else {
+		log.Println("No additional ports specified")
 	}
 
 	var portsStr []string
