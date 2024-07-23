@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Copyright 2024-present devbox contributors.
+# Copyright 2024-present Contanize contributors.
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -64,87 +64,49 @@ check_installations() {
     fi
 }
 
-# Function to clone repository and set it up
-setup_repository() {
-    echo -e "\n${CYAN}Cloning repository...${NC}"
-    REPO_DIR="$HOME/.devbox"
-    git clone https://github.com/harshau007/devbox.git "$REPO_DIR" || {
-        echo -e "${RED}Failed to clone repository.${NC}"
+# Function to clone contanize repository, move files, and clean up
+setup_contanize() {
+    echo -e "\n${CYAN}Cloning contanize repository...${NC}"
+    CONTANIZE_DIR="$HOME/.contanize"
+    git clone https://github.com/harshau007/contanize.git "$CONTANIZE_DIR" || {
+        echo -e "${RED}Failed to clone contanize repository.${NC}"
         exit 1
     }
-    cd "$REPO_DIR" || exit 1
+    cd "$CONTANIZE_DIR" || exit 1
 
-    echo -e "\n${CYAN}Setting up the project...${NC}"
-    go mod tidy || {
-        echo -e "${RED}Failed to set up the project.${NC}"
-        remove_repo
-        exit 1
-    }
-
-    echo -e "\n${BLUE}Building the project...${NC}"
-    go build -o devctl || {
-        echo -e "${RED}Failed to build the project.${NC}"
-        remove_repo
-        exit 1
-    }
-
-    echo -e "\n${BLUE}Copying binaries and files...${NC}"
-    sudo cp devctl portdevctl startdevctl /usr/bin/ || {
-        echo -e "${RED}Failed to copy binaries.${NC}"
-        remove_repo
-        exit 1
-    }
-    sudo mkdir -p /usr/local/share/devbox/ || {
-        echo -e "${RED}Failed to create directory for config files.${NC}"
-        remove_repo
-        exit 1
-    }
-    sudo cp dockerfile settings.json setup.sh /usr/local/share/devbox/ || {
-        echo -e "${RED}Failed to copy config files.${NC}"
-        remove_repo
-        exit 1
-    }
-
-    echo -e "\n${GREEN}Project setup completed!${NC}"
-    echo -e "${YELLOW}Run 'devctl -h' for further details.${NC}"
-}
-
-# Function to clone devbox-desktop repository, move files, and clean up
-setup_devbox_desktop() {
-    echo -e "\n${CYAN}Cloning devbox-desktop repository...${NC}"
-    DEVBOX_DESKTOP_DIR="$HOME/.devbox-desktop"
-    git clone https://github.com/harshau007/devbox-desktop.git "$DEVBOX_DESKTOP_DIR" || {
-        echo -e "${RED}Failed to clone devbox-desktop repository.${NC}"
-        exit 1
-    }
-    cd "$DEVBOX_DESKTOP_DIR" || exit 1
-
-    echo -e "\n${BLUE}Moving devboxdesktop binary...${NC}"
-    sudo cp build/bin/devboxdesktop /usr/bin/ || {
-        echo -e "${RED}Failed to move devboxdesktop binary.${NC}"
+    echo -e "\n${BLUE}Moving contanize binary...${NC}"
+    sudo cp build/bin/contanize /usr/bin/ || {
+        echo -e "${RED}Failed to move contanize binary.${NC}"
         remove_repo "$REPO_DIR"
-        remove_repo "$DEVBOX_DESKTOP_DIR"
+        remove_repo "$CONTANIZE_DIR"
         exit 1
     }
 
-    echo -e "\n${BLUE}Moving devbox.desktop...${NC}"
-    sudo cp LinuxBuild/devbox.desktop /usr/share/applications/ || {
-        echo -e "${RED}Failed to move devbox.desktop.${NC}"
+    echo -e "\n${BLUE}Moving contanize.desktop...${NC}"
+    sudo cp LinuxBuild/contanize.desktop /usr/share/applications/ || {
+        echo -e "${RED}Failed to move contanize.desktop.${NC}"
         remove_repo "$REPO_DIR"
-        remove_repo "$DEVBOX_DESKTOP_DIR"
+        remove_repo "$CONTANIZE_DIR"
         exit 1
     }
 
-    echo -e "\n${BLUE}Moving devbox.png...${NC}"
-    sudo cp LinuxBuild/devbox.png /usr/share/pixmaps/ || {
-        echo -e "${RED}Failed to move devbox.png.${NC}"
+    echo -e "\n${BLUE}Moving Essentials...${NC}"
+    sudo cp LinuxBuild/dockerfile LinuxBuild/settings.json LinuxBuild/setup.sh /usr/local/share/contanize/ || {
+        echo -e "${RED}Failed to copy essentials files.${NC}"
+        remove_repo
+        exit 1
+    }
+
+    echo -e "\n${BLUE}Moving contanize.png...${NC}"
+    sudo cp LinuxBuild/contanize.png /usr/share/pixmaps/ || {
+        echo -e "${RED}Failed to move contanize.png.${NC}"
         remove_repo "$REPO_DIR"
-        remove_repo "$DEVBOX_DESKTOP_DIR"
+        remove_repo "$CONTANIZE_DIR"
         exit 1
     }
 
-    echo -e "\n${GREEN}Setup completed for devbox-desktop!${NC}"
-    remove_repo "$DEVBOX_DESKTOP_DIR"
+    echo -e "\n${GREEN}Setup completed for contanize!${NC}"
+    remove_repo "$CONTANIZE_DIR"
 }
 
 # Function to remove the cloned repository
@@ -153,9 +115,8 @@ remove_repo() {
 }
 
 # Function to handle script exit
-trap 'remove_repo "$REPO_DIR"; remove_repo "$DEVBOX_DESKTOP_DIR"' EXIT
+trap 'remove_repo "$REPO_DIR"; remove_repo "$CONTANIZE_DIR"' EXIT
 
 check_distro
 check_installations
-setup_repository
-setup_devbox_desktop
+setup_contanize

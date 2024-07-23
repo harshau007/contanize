@@ -1,0 +1,56 @@
+- container_id: 941308cb9f49dbf4144402dcfafa3ab77221fd7e504645386a6ef994e87b2e67
+  name: mynewst
+  image: mynewst-rukobpye
+  ports:
+    "3000": "3000"
+    "8080": "8080"
+  volume: /home/harsh/Desktop/nest
+  template: nest
+- container_id: d117525fbad8ddd8614a471d4a475b28303e775c6741301ced6db681820f1e22
+  name: harsh
+  image: harsh-vk893egb
+  ports:
+    "3000": "3000"
+    "8080": "8080"
+  volume: /home/harsh/Desktop/harsh
+  template: nest
+- container_id: d78a8e07a9cd8a3e246f35e63c73958880e320bc9abd50e0c18d57110f6d0152
+  name: harsh
+  image: harsh-24wtgo7r
+  ports:
+    "3000": "3000"
+    "8080": "8080"
+  volume: /home/harsh/Desktop/harsh
+  template: nest
+- container_id: 9809b06663f09074a9e92f30c2a5ddb24e46a48228f6517d9cf58141391c996c
+  name: mytest
+  image: mytest-qsst5hh2
+  ports:
+    "3000": "3000"
+    "8080": "8080"
+  volume: /home/harsh/Desktop/mytest
+  template: nest
+- container_id: c3a08b7753b07c78a353484ae648184707e74e12f0d862299299f9896355f4a7
+  name: harsh
+  image: harsh-mpggs2c1
+  ports:
+    "3000": "3000"
+    "8080": "8080"
+  volume: /home/harsh/Desktop/harsh
+  template: nest
+- container_id: e3d287ab5ec9054e951fa03c554cfea44da6a3c0d94f73559178ac2be9fc79fe
+  name: harsh
+  image: harsh-9l1xurcq
+  ports:
+    "3000": "3000"
+    "8080": "8080"
+  volume: /home/harsh/Desktop/harsh
+  template: nest
+- container_id: 420578ef924c36c70afef3e7e1fb047f9fffa02c67e1cd716e589d31ee23c8a9
+  name: my
+  image: my-5ly6h1dh
+  ports:
+    "3000": "3000"
+    "8080": "8080"
+  volume: /home/harsh/Desktop/harsh
+  template: none

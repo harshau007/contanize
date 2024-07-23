@@ -25,15 +25,15 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:             "DevBox Desktop",
-		Width:             1024,
-		Height:            768,
-		MinWidth:          1024,
-		MinHeight:         768,
-		MaxWidth:          1280,
-		MaxHeight:         800,
-		DisableResize:     true,
-		Fullscreen:        false,
+		Title:             "Contanize",
+		Width:             1200,
+		Height:            900,
+		MinWidth:          0,
+		MinHeight:         0,
+		MaxWidth:          0,
+		MaxHeight:         0,
+		DisableResize:     false,
+		Fullscreen:        true,
 		Frameless:         false,
 		StartHidden:       false,
 		HideWindowOnClose: false,
@@ -76,7 +76,7 @@ func main() {
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 			About: &mac.AboutInfo{
-				Title:   "DevBox Desktop",
+				Title:   "Contanize",
 				Message: "",
 				Icon:    icon,
 			},
