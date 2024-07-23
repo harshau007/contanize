@@ -11,14 +11,22 @@ import ImageDetails from "./components/ImageDetails";
 import CreateForm from "./components/CreateForm";
 import "./globals.css";
 import Loading from "./components/Loading";
+import Placeholder from "./components/Placeholder";
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("containers");
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
-  const [selectedContId, setSelectedContId] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(
-    () => localStorage.getItem("theme") === "dark"
+  const [activeTab, setActiveTab] = useState(
+    () => localStorage.getItem("activeTab") || "containers"
   );
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(
+    () => localStorage.getItem("selectedImageId") || null
+  );
+  const [selectedContId, setSelectedContId] = useState<string | null>(
+    () => localStorage.getItem("selectedContId") || null
+  );
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem("theme");
+    return savedTheme === null ? true : savedTheme === "dark";
+  });
   const [containers, setContainers] = useState<main.containerDetail[]>([]);
   const [images, setImages] = useState<main.imageDetail[]>([]);
   const [isCreating, setIsCreating] = useState<boolean>(false);
@@ -61,6 +69,29 @@ const App: React.FC = () => {
     localStorage.setItem("theme", isDarkMode ? "dark" : "light");
   }, [isDarkMode]);
 
+  useEffect(() => {
+    localStorage.setItem("activeTab", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "containers" && containers.length > 0) {
+      if (!selectedContId || !containers.some((c) => c.id === selectedContId)) {
+        const newSelectedId = containers[0].id;
+        setSelectedContId(newSelectedId);
+        localStorage.setItem("selectedContId", newSelectedId);
+      }
+    } else if (activeTab === "images" && images.length > 0) {
+      if (
+        !selectedImageId ||
+        !images.some((i) => i.image_id === selectedImageId)
+      ) {
+        const newSelectedId = images[0].image_id;
+        setSelectedImageId(newSelectedId);
+        localStorage.setItem("selectedImageId", newSelectedId);
+      }
+    }
+  }, [activeTab, containers, images, selectedContId, selectedImageId]);
+
   const handleThemeToggle = () => setIsDarkMode((prev) => !prev);
   const handleCreateClick = () => setIsFormOpen(true);
   const handleCloseForm = () => setIsFormOpen(false);
@@ -73,6 +104,19 @@ const App: React.FC = () => {
   const selectedImage = useMemo(
     () => images.find((i) => i.image_id === selectedImageId) || null,
     [images, selectedImageId]
+  );
+
+  const handleItemClick = useCallback(
+    (id: string) => {
+      if (activeTab === "containers") {
+        setSelectedContId(id);
+        localStorage.setItem("selectedContId", id);
+      } else {
+        setSelectedImageId(id);
+        localStorage.setItem("selectedImageId", id);
+      }
+    },
+    [activeTab]
   );
 
   const renderList = useCallback(() => {
@@ -99,11 +143,7 @@ const App: React.FC = () => {
               className={`cursor-pointer p-2 pl-5 rounded-lg ${
                 isSelected ? "bg-accent" : "hover:bg-accent/50"
               }`}
-              onClick={() =>
-                activeTab === "containers"
-                  ? setSelectedContId(id)
-                  : setSelectedImageId(id)
-              }
+              onClick={() => handleItemClick(id)}
             >
               {name}
             </li>
@@ -111,7 +151,14 @@ const App: React.FC = () => {
         })}
       </ul>
     );
-  }, [activeTab, containers, images, selectedContId, selectedImageId]);
+  }, [
+    activeTab,
+    containers,
+    images,
+    selectedContId,
+    selectedImageId,
+    handleItemClick,
+  ]);
 
   return (
     <div
@@ -152,6 +199,13 @@ const App: React.FC = () => {
         )}
         {activeTab === "images" && selectedImage && (
           <ImageDetails image={selectedImage} />
+        )}
+
+        {activeTab === "containers" && containers.length === 0 && (
+          <Placeholder text="please select an container" />
+        )}
+        {activeTab === "images" && images.length === 0 && (
+          <Placeholder text="please select an image" />
         )}
       </main>
       {isFormOpen && (

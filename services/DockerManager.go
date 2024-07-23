@@ -116,13 +116,13 @@ func (dc *DockerCreate) CreateContainer(name, technology, volume, additionalPort
 		"ADDITIONAL_PORT":     &additionalPorts,
 		"TEMPLATE_NAME":       &templateName,
 	}
-	dockerfilePath := "/usr/local/share/devbox/dockerfile"
+	dockerfilePath := "/usr/local/share/contanize/dockerfile"
 	fmt.Println("Dockerfile path:", dockerfilePath)
 
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
 
-	buildContext := "/usr/local/share/devbox/"
+	buildContext := "/usr/local/share/contanize/"
 	err = filepath.Walk(buildContext, func(file string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err

@@ -1,8 +1,8 @@
 package main
 
 import (
+	"contanize/services"
 	"context"
-	"devbox/services"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -137,7 +137,7 @@ func (a *App) ListAllContainersJSON() []containerDetail {
 	defer cli.Close()
 
 	filters := filters.NewArgs(
-		filters.Arg("label", "createdBy=DevBox"),
+		filters.Arg("label", "createdBy=Contanize"),
 	)
 	containers, err := cli.ContainerList(ctx, containertypes.ListOptions{All: true, Filters: filters})
 	if err != nil {
@@ -346,7 +346,7 @@ func (a *App) ListImages() []imageDetail {
 		return nil
 	}
 	defer cli.Close()
-	filters := filters.NewArgs(filters.Arg("label", "createdBy=DevBox"))
+	filters := filters.NewArgs(filters.Arg("label", "createdBy=Contanize"))
 	images, err := cli.ImageList(ctx, imagetype.ListOptions{Filters: filters})
 	if err != nil {
 		return nil

@@ -24,7 +24,7 @@ func RunPostgresContainer(user, password, db, containerName string) (string, err
 		log.Fatal("Error while finding port", err)
 	}
 	command := fmt.Sprintf(`docker run -d \
-	--label createdBy=DevBox \
+	--label createdBy=Contanize \
 	--label type=Database \
 	--label dbuser=%s \
 	--label db=postgres \
@@ -66,7 +66,7 @@ func RunMongoContainer(user, password, db, containerName string) (string, error)
 	}
 
 	command := fmt.Sprintf(`docker run -d \
-        --label createdBy=DevBox \
+        --label createdBy=Contanize \
         --label type=Database \
         --label dbuser=%s \
         --label db=mongo \
