@@ -91,6 +91,7 @@ setup_contanize() {
     }
 
     echo -e "\n${BLUE}Moving Essentials...${NC}"
+    sudo mkdir /usr/local/share/contanize
     sudo cp LinuxBuild/dockerfile LinuxBuild/settings.json LinuxBuild/setup.sh /usr/local/share/contanize/ || {
         echo -e "${RED}Failed to copy essentials files.${NC}"
         remove_repo

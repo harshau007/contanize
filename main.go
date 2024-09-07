@@ -25,7 +25,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:             "Contanize",
+		Title:             "Contanize (Beta)",
 		Width:             1200,
 		Height:            900,
 		MinWidth:          0,
