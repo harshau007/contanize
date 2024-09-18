@@ -1,5 +1,11 @@
-import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -9,22 +15,15 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye, EyeOff, FolderOpen } from "lucide-react";
+import React, { useState } from "react";
 import {
   CreateCodeInstance,
   CreateDB,
   SelectFolder,
 } from "../../wailsjs/go/main/App";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
-import { IoFolderOpenOutline } from "react-icons/io5";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 
 interface CreateFormProps {
   open: boolean;
@@ -33,12 +32,12 @@ interface CreateFormProps {
   setIsCreating: (isCreating: boolean) => void;
 }
 
-const CreateForm: React.FC<CreateFormProps> = ({
+export default function CreateForm({
   open,
   onClose,
   isCreating,
   setIsCreating,
-}) => {
+}: CreateFormProps) {
   const [activeTab, setActiveTab] = useState("package");
   const [containerName, setContainerName] = useState("");
   const [technology, setTechnology] = useState("");
@@ -54,6 +53,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
   const choices = [
     "NodeLTS",
     "Node18",
@@ -77,7 +77,6 @@ const CreateForm: React.FC<CreateFormProps> = ({
     } else if (activeTab === "template") {
       await CreateCodeInstance(containerName, "none", folder, port, template);
     } else {
-      // dbtype, username, password, dbname, contname
       const id = await CreateDB(
         database,
         dbuser,
@@ -134,10 +133,13 @@ const CreateForm: React.FC<CreateFormProps> = ({
               <div className="relative">
                 <Input placeholder="Folder Path" value={folder} readOnly />
                 <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
                   className="absolute right-0 top-0 h-full"
                   onClick={handleSelectFolder}
                 >
-                  <IoFolderOpenOutline className="h-5 w-5" />
+                  <FolderOpen className="h-4 w-4" />
                 </Button>
               </div>
               <Input
@@ -176,10 +178,13 @@ const CreateForm: React.FC<CreateFormProps> = ({
               <div className="relative">
                 <Input placeholder="Folder Path" value={folder} readOnly />
                 <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
                   className="absolute right-0 top-0 h-full"
                   onClick={handleSelectFolder}
                 >
-                  <IoFolderOpenOutline className="h-5 w-5" />
+                  <FolderOpen className="h-4 w-4" />
                 </Button>
               </div>
               <Input
@@ -228,17 +233,19 @@ const CreateForm: React.FC<CreateFormProps> = ({
                   onChange={(e) => setDbPass(e.target.value)}
                   type={showPassword ? "text" : "password"}
                 />
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full"
                   onClick={togglePasswordVisibility}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800 focus:outline-none"
                 >
                   {showPassword ? (
-                    <AiFillEyeInvisible size={24} />
+                    <EyeOff className="h-4 w-4" />
                   ) : (
-                    <AiFillEye size={24} />
+                    <Eye className="h-4 w-4" />
                   )}
-                </button>
+                </Button>
               </div>
             </form>
           </TabsContent>
@@ -252,6 +259,4 @@ const CreateForm: React.FC<CreateFormProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
-
-export default CreateForm;
+}

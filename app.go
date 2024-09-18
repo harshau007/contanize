@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"contanize/services"
 	"context"
 	"encoding/json"
@@ -80,6 +81,11 @@ type ContainerMetrics struct {
 	NetworkOutput    string `json:"networkOutput"`
 	DiskIO           string `json:"diskIO"`
 	RunningProcesses string `json:"runningProcesses"`
+}
+
+type ContainerLog struct {
+	LogLine string `json:"logLine"`
+	IsError bool   `json:"isError"`
 }
 
 // NewApp creates a new App application struct
@@ -583,14 +589,13 @@ func (a *App) GetMemoryStats(containerID string) []MemoryStats {
 }
 
 func (a *App) GetContainerMetrics(containerID string) (ContainerMetrics, error) {
-	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return ContainerMetrics{}, fmt.Errorf("error creating Docker client: %v", err)
 	}
 	defer cli.Close()
 
-	stats, err := cli.ContainerStats(ctx, containerID, false)
+	stats, err := cli.ContainerStats(a.ctx, containerID, false)
 	if err != nil {
 		return ContainerMetrics{}, fmt.Errorf("error getting container stats: %v", err)
 	}
@@ -636,6 +641,60 @@ func (a *App) GetContainerMetrics(containerID string) (ContainerMetrics, error) 
 		DiskIO:           fmt.Sprintf("%.2f", diskIO),
 		RunningProcesses: fmt.Sprintf("%d", runningProcesses),
 	}, nil
+}
+
+func (a *App) GetContainerLogs(containerID string) ([]ContainerLog, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return nil, fmt.Errorf("error while creating client: %w", err)
+	}
+	defer cli.Close()
+
+	containerInfo, err := cli.ContainerInspect(context.Background(), containerID)
+	if err != nil {
+		return nil, fmt.Errorf("error inspecting container: %w", err)
+	}
+
+	if !containerInfo.State.Running {
+		return nil, fmt.Errorf("container is not running")
+	}
+
+	logs, err := cli.ContainerLogs(a.ctx, containerID, containertypes.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     false,
+		Timestamps: true,
+		Tail:       "all",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error while getting logs: %w", err)
+	}
+	defer logs.Close()
+
+	scanner := bufio.NewScanner(logs)
+	var containerLogs []ContainerLog
+
+	for scanner.Scan() {
+		logLine := scanner.Text()
+		if len(logLine) > 0 {
+			parts := strings.SplitN(logLine, " ", 2)
+			if len(parts) == 2 {
+				logLine = parts[1]
+			}
+		}
+
+		containerLogs = append(containerLogs, ContainerLog{
+			LogLine: logLine,
+			IsError: false,
+		})
+	}
+
+	// Check for scanning errors
+	if err := scanner.Err(); err != nil {
+		return containerLogs, fmt.Errorf("error reading container logs: %w", err)
+	}
+
+	return containerLogs, nil
 }
 
 func (a *App) CreateDB(dbtype, username, password, dbname, contname string) string {

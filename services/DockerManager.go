@@ -211,6 +211,9 @@ func (dc *DockerCreate) CreateContainer(name, technology, volume, additionalPort
 		PortBindings: portBindings,
 		Binds:        []string{volume + ":/home/coder"},
 		Privileged:   true,
+		// LogConfig: container.LogConfig{
+		// 	Type: "json-file",
+		// },
 	}, nil, nil, name)
 	if err != nil {
 		return fmt.Errorf("failed to create container: %v", err)

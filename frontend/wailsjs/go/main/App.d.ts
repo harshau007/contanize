@@ -10,6 +10,8 @@ export function ForceRemoveContainer(arg1:string):Promise<void>;
 
 export function GetCPUStats(arg1:string):Promise<Array<main.CPUStats>>;
 
+export function GetContainerLogs(arg1:string):Promise<Array<main.ContainerLog>>;
+
 export function GetContainerMetrics(arg1:string):Promise<main.ContainerMetrics>;
 
 export function GetImageLayerSize(arg1:string):Promise<Array<main.LayerInfo>>;

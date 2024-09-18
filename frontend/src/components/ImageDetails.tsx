@@ -1,26 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
-import { FiTrash2 } from "react-icons/fi";
-import { Bar, BarChart, CartesianGrid, LabelList, XAxis } from "recharts";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  Tooltip as ShadTooltip,
-} from "./ui/tooltip";
-import { main } from "../../wailsjs/go/models";
-import {
-  GetImageLayerSize,
-  ListAllContainersJSON,
-  RemoveImages,
-} from "../../wailsjs/go/main/App";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +7,31 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
+} from "@/components/ui/dialog";
+import {
+  Tooltip as ShadTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  LabelList,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  GetImageLayerSize,
+  ListAllContainersJSON,
+  RemoveImages,
+} from "../../wailsjs/go/main/App";
+import { main } from "../../wailsjs/go/models";
+import { ChartConfig, ChartContainer } from "./ui/chart";
 
 interface ImageDetailsProps {
   image: main.imageDetail;
@@ -41,8 +44,8 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
-  const [imageLayerInfo, setImageLayerInfo] = useState<main.LayerInfo[]>();
+export default function ImageDetails({ image }: ImageDetailsProps) {
+  const [imageLayerInfo, setImageLayerInfo] = useState<main.LayerInfo[]>([]);
   const [usedImages, setUsedImages] = useState<string[]>([]);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
 
@@ -88,7 +91,7 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
   const isImageUsed = (imageId: string) => usedImages.includes(imageId);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
@@ -97,7 +100,7 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
             </span>
             <TooltipProvider>
               <ShadTooltip>
-                <TooltipTrigger>
+                <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     size="icon"
@@ -108,7 +111,7 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
                     }`}
                     onClick={openRemoveDialog}
                   >
-                    <FiTrash2 />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -119,21 +122,27 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p>
-            <strong>ID:</strong> {image.image_id}
-          </p>
-          <p>
-            <strong>Created:</strong> {image.created}
-          </p>
-          <p>
-            <strong>Size:</strong> {image.size}
-          </p>
-          <p>
-            <strong>Architecture:</strong> {image.arch}
-          </p>
-          <p>
-            <strong>OS:</strong> {image.os}
-          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p>
+                <strong>ID:</strong> {image.image_id}
+              </p>
+              <p>
+                <strong>Created:</strong> {image.created}
+              </p>
+              <p>
+                <strong>Size:</strong> {image.size}
+              </p>
+            </div>
+            <div>
+              <p>
+                <strong>Architecture:</strong> {image.arch}
+              </p>
+              <p>
+                <strong>OS:</strong> {image.os}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -144,31 +153,24 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
         <CardContent className="h-75">
           <ChartContainer config={chartConfig}>
             <BarChart
-              accessibilityLayer
               data={imageLayerInfo}
               margin={{
                 top: 20,
+                right: 30,
+                left: 20,
+                bottom: 5,
               }}
             >
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="id"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent hideLabel />}
-                formatter={(value) => `Size: ${value} MiB`}
-              />
-              <Bar dataKey="size" fill="var(--color-desktop)" radius={8}>
-                <LabelList
-                  position="top"
-                  offset={12}
-                  className="fill-foreground"
-                  fontSize={12}
-                />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="id" />
+              <YAxis />
+              <Tooltip />
+              <Bar
+                dataKey="size"
+                fill="hsl(var(--chart-1))"
+                radius={[4, 4, 0, 0]}
+              >
+                <LabelList dataKey="size" position="top" />
               </Bar>
             </BarChart>
           </ChartContainer>
@@ -199,6 +201,4 @@ const ImageDetails: React.FC<ImageDetailsProps> = ({ image }) => {
       </Dialog>
     </div>
   );
-};
-
-export default ImageDetails;
+}

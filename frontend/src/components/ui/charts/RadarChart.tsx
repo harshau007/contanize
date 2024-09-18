@@ -37,7 +37,7 @@ const chartConfig = {
 
 export const RadarChart: React.FC<RadarChartProps> = ({ data, status }) => {
   return (
-    <Card className="w-full h-full">
+    <Card>
       {status === "Exited" ? (
         <CardContent>
           <div className="flex justify-center items-center h-72 text-gray-500">
@@ -46,13 +46,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({ data, status }) => {
         </CardContent>
       ) : (
         <CardContent>
-          <CardHeader>
-            <CardTitle>Container Metrics</CardTitle>
-            <CardDescription>
-              Showing current metrics for the container
-            </CardDescription>
-          </CardHeader>
-          <ChartContainer config={chartConfig} className="w-full aspect-square">
+          <ChartContainer config={chartConfig} className="w-full">
             <RechartsRadarChart data={data}>
               <ChartTooltip
                 cursor={true}

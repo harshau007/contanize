@@ -1,3 +1,5 @@
+@import "@fontsource/geist-sans";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,7 +47,7 @@ body {
     --chart-5: 27 87% 67%;
   }
 
-  .dark {
+  [data-theme="dark"] {
     --background: 240 14.3% 3.5%;
     --foreground: 210 40% 98%;
 

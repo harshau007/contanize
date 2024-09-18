@@ -14,6 +14,20 @@ export namespace main {
 	        this.usage = source["usage"];
 	    }
 	}
+	export class ContainerLog {
+	    logLine: string;
+	    isError: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContainerLog(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.logLine = source["logLine"];
+	        this.isError = source["isError"];
+	    }
+	}
 	export class ContainerMetrics {
 	    cpuUsage: string;
 	    memoryUsage: string;

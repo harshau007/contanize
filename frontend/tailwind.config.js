@@ -2,7 +2,6 @@
 module.exports = {
   darkMode: ["class"],
   content: [
-    "./index.html",
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
@@ -17,11 +16,10 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Geist Sans", "sans-serif"],
+      },
       colors: {
-        "dark-gray": "#09090B",
-        "deep-dark": "#09090B",
-        "light-gray": "#F4F4F5",
-        "light-white": "#FFFFFF",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

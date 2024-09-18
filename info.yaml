@@ -54,3 +54,38 @@
     "8080": "8080"
   volume: /home/harsh/Desktop/harsh
   template: none
+- container_id: 3f5d576cc3a69f9900654311dcc1e7cabfa24f1d7a16fcfaa31507e3b34a5256
+  name: mycpnt
+  image: mycpnt-v598mkkp
+  ports:
+    "8080": "8080"
+  volume: /home/harsh/Dev/mytest
+  template: none
+- container_id: 479b0c34880463b9f07adc8b9574ccb87b8f29ad76d553a00e75cc7db7682d10
+  name: mynewcont
+  image: mynewcont-ziippbx2
+  ports:
+    "8080": "8080"
+  volume: /home/harsh/Dev/mytest
+  template: none
+- container_id: 7a9f32b80d37c767344f3bff07d3ab68ec971b5a6657f1a1c5242b296d4d8bfc
+  name: dae
+  image: dae-t1kuon1h
+  ports:
+    "8080": "8080"
+  volume: /home/harsh/Documents
+  template: none
+- container_id: 47afc494a62a8e5dbc61f38b7b81f4d862c7d6eed3950ce71aaaee919c10a043
+  name: sawas
+  image: sawas-yhgin53e
+  ports:
+    "8080": "8080"
+  volume: /home/harsh/Dev/microservices
+  template: none
+- container_id: 789f8b80dd0674d072d9e29ffc2f5019271c9e3fe8115b545a2edd7f07bfff5c
+  name: mmynewcon
+  image: mmynewcon-y4jbbkrd
+  ports:
+    "8080": "8080"
+  volume: /home/harsh/Dev/microservices
+  template: none

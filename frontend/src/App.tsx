@@ -1,21 +1,23 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { Button } from "./components/ui/button";
-import { ScrollArea } from "./components/ui/scroll-area";
-import { FiPlus } from "react-icons/fi";
-import { IoSunny, IoMoon } from "react-icons/io5";
+import { Box, Image as ImageIcon, Moon, Plus, Sun } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ListAllContainersJSON, ListImages } from "../wailsjs/go/main/App";
 import { main } from "../wailsjs/go/models";
 import ContainerDetails from "./components/ContainerDetails";
-import ImageDetails from "./components/ImageDetails";
 import CreateForm from "./components/CreateForm";
-import "./globals.css";
+import ImageDetails from "./components/ImageDetails";
 import Loading from "./components/Loading";
 import Placeholder from "./components/Placeholder";
+import { Button } from "./components/ui/button";
+import { ScrollArea } from "./components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
+import "./globals.css";
+import { ThemeProvider, useTheme } from "./lib/theme-provider";
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState(
-    () => localStorage.getItem("activeTab") || "containers"
+  const [activeTab, setActiveTab] = useState<"containers" | "images">(
+    () =>
+      (localStorage.getItem("activeTab") as "containers" | "images") ||
+      "containers"
   );
   const [selectedImageId, setSelectedImageId] = useState<string | null>(
     () => localStorage.getItem("selectedImageId") || null
@@ -23,10 +25,6 @@ const App: React.FC = () => {
   const [selectedContId, setSelectedContId] = useState<string | null>(
     () => localStorage.getItem("selectedContId") || null
   );
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem("theme");
-    return savedTheme === null ? true : savedTheme === "dark";
-  });
   const [containers, setContainers] = useState<main.containerDetail[]>([]);
   const [images, setImages] = useState<main.imageDetail[]>([]);
   const [isCreating, setIsCreating] = useState<boolean>(false);
@@ -65,11 +63,6 @@ const App: React.FC = () => {
   }, [fetchData]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDarkMode);
-    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
-  }, [isDarkMode]);
-
-  useEffect(() => {
     localStorage.setItem("activeTab", activeTab);
   }, [activeTab]);
 
@@ -92,7 +85,6 @@ const App: React.FC = () => {
     }
   }, [activeTab, containers, images, selectedContId, selectedImageId]);
 
-  const handleThemeToggle = () => setIsDarkMode((prev) => !prev);
   const handleCreateClick = () => setIsFormOpen(true);
   const handleCloseForm = () => setIsFormOpen(false);
 
@@ -141,10 +133,17 @@ const App: React.FC = () => {
             <li
               key={id}
               className={`cursor-pointer p-2 pl-5 rounded-lg ${
-                isSelected ? "bg-accent" : "hover:bg-accent/50"
+                isSelected
+                  ? "bg-accent text-accent-foreground"
+                  : "hover:bg-accent/50"
               }`}
               onClick={() => handleItemClick(id)}
             >
+              {activeTab === "containers" ? (
+                <Box className="inline-block mr-2 h-4 w-4" />
+              ) : (
+                <ImageIcon className="inline-block mr-2 h-4 w-4" />
+              )}
               {name}
             </li>
           );
@@ -158,20 +157,74 @@ const App: React.FC = () => {
     selectedContId,
     selectedImageId,
     handleItemClick,
+    isCreating,
   ]);
 
   return (
-    <div
-      className={`flex h-screen select-none ${
-        isDarkMode ? "bg-deep-dark" : ""
-      } bg-background text-foreground`}
-    >
+    <ThemeProvider>
+      <AppContent
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        selectedContainer={selectedContainer}
+        selectedImage={selectedImage}
+        containers={containers}
+        images={images}
+        isFormOpen={isFormOpen}
+        isCreating={isCreating}
+        setIsCreating={setIsCreating}
+        handleCreateClick={handleCreateClick}
+        handleCloseForm={handleCloseForm}
+        renderList={renderList}
+      />
+    </ThemeProvider>
+  );
+};
+
+interface AppContentProps {
+  activeTab: "containers" | "images";
+  setActiveTab: React.Dispatch<React.SetStateAction<"containers" | "images">>;
+  selectedContainer: main.containerDetail | null;
+  selectedImage: main.imageDetail | null;
+  containers: main.containerDetail[];
+  images: main.imageDetail[];
+  isFormOpen: boolean;
+  isCreating: boolean;
+  setIsCreating: React.Dispatch<React.SetStateAction<boolean>>;
+  handleCreateClick: () => void;
+  handleCloseForm: () => void;
+  renderList: () => JSX.Element;
+}
+
+const AppContent: React.FC<AppContentProps> = ({
+  activeTab,
+  setActiveTab,
+  selectedContainer,
+  selectedImage,
+  containers,
+  images,
+  isFormOpen,
+  isCreating,
+  setIsCreating,
+  handleCreateClick,
+  handleCloseForm,
+  renderList,
+}) => {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <div className="flex h-screen select-none bg-background text-foreground">
       <aside className="w-64 border-r border-border p-4 flex flex-col">
-        <Button onClick={handleCreateClick} className="mb-4">
-          <FiPlus className="mr-2" />
+        <Button onClick={handleCreateClick} className="mb-4 w-full">
+          <Plus className="mr-2 h-4 w-4" />
           Create
         </Button>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value: string) =>
+            setActiveTab(value as "containers" | "images")
+          }
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="containers">Containers</TabsTrigger>
             <TabsTrigger value="images">Images</TabsTrigger>
@@ -179,18 +232,18 @@ const App: React.FC = () => {
         </Tabs>
         <ScrollArea className="flex-grow">{renderList()}</ScrollArea>
         <div className="mt-auto pt-4 flex items-center justify-between">
-          <button
-            className={`absolute bottom-4 left-4 p-2 ${
-              isDarkMode ? "bg-deep-dark" : "bg-light-white"
-            } rounded-full focus:outline-none`}
-            onClick={handleThemeToggle}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
           >
-            {isDarkMode ? (
-              <IoSunny className="text-yellow-500" />
+            {theme === "light" ? (
+              <Moon className="h-[1.2rem] w-[1.2rem]" />
             ) : (
-              <IoMoon className="text-deep-dark" />
+              <Sun className="h-[1.2rem] w-[1.2rem]" />
             )}
-          </button>
+          </Button>
         </div>
       </aside>
       <main className="flex-1 p-4 overflow-auto">
@@ -200,12 +253,11 @@ const App: React.FC = () => {
         {activeTab === "images" && selectedImage && (
           <ImageDetails image={selectedImage} />
         )}
-
         {activeTab === "containers" && containers.length === 0 && (
-          <Placeholder text="please select an container" />
+          <Placeholder text="No containers available" />
         )}
         {activeTab === "images" && images.length === 0 && (
-          <Placeholder text="please select an image" />
+          <Placeholder text="No images available" />
         )}
       </main>
       {isFormOpen && (

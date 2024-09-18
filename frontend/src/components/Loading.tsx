@@ -8,7 +8,7 @@ const Loading: React.FC<{ isCreating: boolean }> = ({ isCreating }) => (
       <p>Creating Container...</p>
     </div>
     {isCreating && (
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r rounded-md from-white to-transparent pointer-events-none opacity-50 animate-ray" />
+      <div className="absolute top-0 left-0 w-full h-full border-2 border-white bg-gradient-to-r rounded-md from-white to-transparent pointer-events-none opacity-50 animate-ray" />
     )}
   </div>
 );

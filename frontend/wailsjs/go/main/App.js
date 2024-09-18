@@ -18,6 +18,10 @@ export function GetCPUStats(arg1) {
   return window['go']['main']['App']['GetCPUStats'](arg1);
 }
 
+export function GetContainerLogs(arg1) {
+  return window['go']['main']['App']['GetContainerLogs'](arg1);
+}
+
 export function GetContainerMetrics(arg1) {
   return window['go']['main']['App']['GetContainerMetrics'](arg1);
 }
